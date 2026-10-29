@@ -752,40 +752,51 @@ go = function(id){ if(id==="s-cta") buildCTA(); _go(id); };
                    url: P.url, img: P.img, blurb: r[1] || "" };
         });
         (function(){
-          function _send(email){
-            if (window.klaviyo && typeof window.klaviyo.subscribe === "function") {
-              window.klaviyo.subscribe(email, (function(){
-                var P=(typeof PRODUCTS!=="undefined"?PRODUCTS:{}), A_=A||{}, ABS="https://combatassessment.com/";
-                var strip=function(s){return String(s==null?"":s).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();};
-                var img=function(p){p=p||"";if(!p)return "";return /^https?:/i.test(p)?p:ABS+String(p).replace(/^\/+/,"");};
-                var PK={tm_strike_warrior:1,tm_deagle_chrome:1,g19_gen5:1,fiveseven_tan:1};
-                var noGBB=function(t,k){var w=PK[k]?"airsoft pistol":"airsoft rifle";return String(t==null?"":t).replace(/GBBR?/gi,w);};
-                var cut=function(s,n){s=String(s==null?"":s);if(s.length<=n)return s;var t=s.slice(0,n);var i=t.lastIndexOf(" ");if(i>n*0.55)t=t.slice(0,i);return t.replace(/[\s,;:.\-]+$/,"")+"\u2026";};
-                var BG={"PUBG: BATTLEGROUNDS":"assets/img/pubg-hero.webp","Ready or Not":"assets/img/ron-hero.webp","Call of Duty":"assets/img/cod-hero.webp","GTA VI":"assets/img/hero.webp"};
-                var TH={"PUBG: BATTLEGROUNDS":["#f2a900","#ffd166"],"Ready or Not":["#4d9fff","#8dc2ff"],"Call of Duty":["#ff7a00","#ffb066"],"GTA VI":["#ff2d78","#ff7fb0"]};
-                var gname=CONFIG.game_name||"", th=TH[gname]||["#e01a2b","#ff6b76"];
-                var tr=A_.traits||[], an=A_.analysis||[], ins=A_.insights||[], rc=A_.recs||[];
-                var o={ $list_id:"TaizN7", $source:"Combat Assessment",
-                  game: gname, character: strip(A_.name), character_sub: strip(A_.sub),
-                  character_img: img(A_.img), game_bg: img(BG[gname]||""),
-                  theme_accent: th[0], theme_accent_2: th[1],
-                  analysis1: strip(an[0]), analysis2: strip(an[1]),
-                  cta_lead: strip(String(CONFIG.cta_lead||"").replace("{ctaLine}", A_.ctaLine||"")),
-                  traits: tr.map(function(t){return t[0]+" "+t[1]+"%";}).join(", ") };
-                for(var i=0;i<4;i++){ var t=tr[i]; o["trait"+(i+1)+"_name"]=t?strip(t[0]):""; o["trait"+(i+1)+"_pct"]=t?String(t[1]):""; }
-                for(var k=0;k<3;k++){ var z=ins[k]||[]; o["insight"+(k+1)+"_emoji"]=z[0]?strip(z[0]):""; o["insight"+(k+1)]=z[1]?strip(z[1]):""; }
-                for(var g=0;g<2;g++){ var r=rc[g]||[], key=r[0], pr=(key&&P[key])||null;
-                  o["gun"+(g+1)+"_name"]=pr?noGBB(pr.name,key):strip(r[2]||key||"");
-                  o["gun"+(g+1)+"_ingame"]=pr?noGBB(pr.ingame,key):"";
-                  o["gun"+(g+1)+"_url"]=pr?pr.url:"";
-                  o["gun"+(g+1)+"_img"]=pr?img(pr.img):"";
-                  o["gun"+(g+1)+"_price"]=(pr&&pr.price!=null)?"$"+pr.price:"";
-                  o["gun"+(g+1)+"_blurb"]=cut(pr?noGBB(strip(r[1]),key):strip(r[1]),150); }
-                return o;
-              })());
-              return true;
-            }
-            return false;
+                    function _send(email){
+            /* Build the personalisation payload once, then use Klaviyo's PUBLIC client API
+               (POST /client/subscriptions) - window.klaviyo.subscribe() is not a real method
+               on the onsite SDK and silently does nothing. */
+            var props = (function(){
+              var P=(typeof PRODUCTS!=="undefined"?PRODUCTS:{}), A_=A||{}, ABS="https://combatassessment.com/";
+              var strip=function(s){return String(s==null?"":s).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();};
+              var img=function(p){p=p||"";if(!p)return "";return /^https?:/i.test(p)?p:ABS+String(p).replace(/^\/+/,"");};
+              var PK={tm_strike_warrior:1,tm_deagle_chrome:1,g19_gen5:1,fiveseven_tan:1};
+              var noGBB=function(t,k){var w=PK[k]?"airsoft pistol":"airsoft rifle";return String(t==null?"":t).replace(/GBBR?/gi,w);};
+              var cut=function(s,n){s=String(s==null?"":s);if(s.length<=n)return s;var t=s.slice(0,n);var i=t.lastIndexOf(" ");if(i>n*0.55)t=t.slice(0,i);return t.replace(/[\s,;:.\-]+$/,"")+"\u2026";};
+              var BG={"PUBG: BATTLEGROUNDS":"assets/img/pubg-hero.webp","Ready or Not":"assets/img/ron-hero.webp","Call of Duty":"assets/img/cod-hero.webp","GTA VI":"assets/img/hero.webp"};
+              var TH={"PUBG: BATTLEGROUNDS":["#f2a900","#ffd166"],"Ready or Not":["#4d9fff","#8dc2ff"],"Call of Duty":["#ff7a00","#ffb066"],"GTA VI":["#ff2d78","#ff7fb0"]};
+              var gname=CONFIG.game_name||"", th=TH[gname]||["#e01a2b","#ff6b76"];
+              var tr=A_.traits||[], an=A_.analysis||[], ins=A_.insights||[], rc=A_.recs||[];
+              var o={ game: gname, character: strip(A_.name), character_sub: strip(A_.sub),
+                character_img: img(A_.img), game_bg: img(BG[gname]||""),
+                theme_accent: th[0], theme_accent_2: th[1],
+                analysis1: strip(an[0]), analysis2: strip(an[1]),
+                cta_lead: strip(String(CONFIG.cta_lead||"").replace("{ctaLine}", A_.ctaLine||"")),
+                traits: tr.map(function(t){return t[0]+" "+t[1]+"%";}).join(", ") };
+              for(var i=0;i<4;i++){ var t=tr[i]; o["trait"+(i+1)+"_name"]=t?strip(t[0]):""; o["trait"+(i+1)+"_pct"]=t?String(t[1]):""; }
+              for(var k=0;k<3;k++){ var z=ins[k]||[]; o["insight"+(k+1)+"_emoji"]=z[0]?strip(z[0]):""; o["insight"+(k+1)]=z[1]?strip(z[1]):""; }
+              for(var g=0;g<2;g++){ var r=rc[g]||[], key=r[0], pr=(key&&P[key])||null;
+                o["gun"+(g+1)+"_name"]=pr?noGBB(pr.name,key):strip(r[2]||key||"");
+                o["gun"+(g+1)+"_ingame"]=pr?noGBB(pr.ingame,key):"";
+                o["gun"+(g+1)+"_url"]=pr?pr.url:"";
+                o["gun"+(g+1)+"_img"]=pr?img(pr.img):"";
+                o["gun"+(g+1)+"_price"]=(pr&&pr.price!=null)?"$"+pr.price:"";
+                o["gun"+(g+1)+"_blurb"]=cut(pr?noGBB(strip(r[1]),key):strip(r[1]),150); }
+              return o;
+            })();
+            try{
+              var payload={ data:{ type:"subscription", attributes:{
+                custom_source:"Combat Assessment",
+                profile:{ data:{ type:"profile", attributes:{ email:email, properties:props } } }
+              }, relationships:{ list:{ data:{ type:"list", id:"TaizN7" } } } } };
+              fetch("https://a.klaviyo.com/client/subscriptions/?company_id=TXaXYk",{
+                method:"POST",
+                headers:{ "Content-Type":"application/json", "revision":"2024-10-15" },
+                body: JSON.stringify(payload)
+              }).then(function(r){ window.__caSubStatus = r.status; }).catch(function(){ window.__caSubStatus = 0; });
+            }catch(e){}
+            try{ if(window.klaviyo && typeof window.klaviyo.identify === "function"){ var ip={email:email}; for(var q in props){ ip[q]=props[q]; } window.klaviyo.identify(ip); } }catch(e){}
+            return true;
           }
           if (!_send(v)) {
             var _n = 0, _iv = setInterval(function(){
