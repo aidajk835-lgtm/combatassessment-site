@@ -258,6 +258,21 @@ h2.q-title{font-family:'Saira Condensed';font-weight:700;font-size:clamp(22px,4.
 .airsoft-intro a.ai-link:hover{color:#fff;border-color:#fff;}
 /* Kill switch: never render RedWolf's Klaviyo onsite forms (popups/flyouts) on this domain */
 div[class*="klaviyo-form"],div[id^="klaviyo-form"],div[class^="klaviyo-form"],.kl-forms-container{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;height:0!important;min-height:0!important;overflow:hidden!important;}
+  /* sent-confirmation modal */
+  .ca-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(4,5,7,.8);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);}
+  .ca-modal.open{display:flex;}
+  .ca-modal-card{position:relative;width:min(420px,100%);max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,rgba(20,23,29,.99),rgba(10,11,13,.99));border:1px solid var(--line);border-top:2px solid var(--accent);border-radius:16px;padding:36px 30px 26px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.6);}
+  .ca-modal-x{position:absolute;top:8px;right:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;border-radius:8px;color:var(--muted);font-family:Arial,Helvetica,sans-serif;font-size:24px;line-height:1;cursor:pointer;padding:0;}
+  .ca-modal-x:hover,.ca-modal-x:focus-visible{color:var(--text);background:rgba(255,255,255,.07);}
+  .ca-modal-ico{width:56px;height:56px;margin:0 auto 18px;border-radius:50%;border:1px solid rgba(61,220,132,.35);background:rgba(61,220,132,.1);display:flex;align-items:center;justify-content:center;color:var(--green);font-size:27px;line-height:1;}
+  .ca-modal-title{margin:0 0 12px;font-family:'Saira Condensed';font-weight:800;font-size:23px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text);}
+  .ca-modal-body{margin:0 0 10px;font-size:14px;line-height:1.65;color:var(--muted);}
+  .ca-modal-email{display:inline-block;margin:2px 0 12px;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:13.5px;line-height:1.4;color:var(--text);word-break:break-all;}
+  .ca-modal-card:focus{outline:none;}
+  .ca-modal-card .btn:focus-visible{outline:2px solid rgba(232,234,237,.5);outline-offset:3px;}
+  .ca-modal-note{margin:16px 0 22px;font-size:12.5px;line-height:1.6;color:#6b7280;}
+  .ca-modal-card .btn{width:100%;}
+  @media (max-width:420px){ .ca-modal{padding:18px;} .ca-modal-card{padding:32px 22px 22px;} .ca-modal-body{font-size:13.5px;} .ca-modal-title{font-size:21px;} }
 </style>
 </head>
 <body class="panel-all hook-center">
@@ -379,7 +394,7 @@ div[class*="klaviyo-form"],div[id^="klaviyo-form"],div[class^="klaviyo-form"],.k
           <input type="email" id="email-in" placeholder="you@example.com" required>
           <button type="submit" class="btn" id="email-btn">Send My Assessment</button>
         </form>
-        <div class="eb-ok" id="email-ok" style="display:none;">✅ Locked in. Watch your inbox for your Combat Assessment — we'll send training notes and deals for your platform.</div>
+        <div class="eb-ok" id="email-ok" style="display:none;"></div>
       </div>
       <div class="actions-row" style="margin-top:30px;justify-content:center;">
         <button class="btn" onclick="go('s-result')">&larr; Back to My Analysis</button>
@@ -629,7 +644,6 @@ go = function(id){ if(id==="s-cta") buildCTA(); _go(id); };
 <!-- ============ ANALYTICS (admin console) ============ -->
 <script async src="https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=TXaXYk"></script>
 <script>window.AZ_CONFIG = {"endpoint": "", "token": "CHANGE-ME-LONG-RANDOM", "game": "PUBG: BATTLEGROUNDS", "enabled": false};</script>
-<script src="admin/analytics.js"></script>
 <script>
 /* performance: warm images so result & gun screens pop instantly */
 (function(){
@@ -670,7 +684,6 @@ go = function(id){ if(id==="s-cta") buildCTA(); _go(id); };
 <script>
 /* hooks: answers, result, cta, gun-link clicks, email capture */
 (function(){
-  if(!window.AZ) return;
 
   /* answer log */
   const _answer = window.answer;
@@ -789,10 +802,38 @@ go = function(id){ if(id==="s-cta") buildCTA(); _go(id); };
       }catch(e){}
       form.style.display = "none";
       const okBox = document.getElementById("email-ok");
-      if(okBox) okBox.style.display = "block";
+      if(okBox){ okBox.textContent = "Sent to " + v + " \u2014 check your inbox. Didn't arrive? Check your spam folder."; okBox.style.display = "block"; }
+      openSentModal(v);
     });
   }
 })();
+</script>
+
+<div class="ca-modal" id="ca-sent" role="dialog" aria-modal="true" aria-labelledby="ca-sent-title" aria-describedby="ca-sent-body" onclick="closeSentModal()">
+  <div class="ca-modal-card" tabindex="-1" onclick="event.stopPropagation()">
+    <button type="button" class="ca-modal-x" aria-label="Close this message" onclick="closeSentModal()">&times;</button>
+    <div class="ca-modal-ico" aria-hidden="true">&#10003;</div>
+    <h3 class="ca-modal-title" id="ca-sent-title">Assessment Sent</h3>
+    <p class="ca-modal-body" id="ca-sent-body" style="margin-bottom:2px;">Your Combat Assessment has been sent to:</p>
+    <div class="ca-modal-email" id="ca-sent-email">your inbox</div>
+    <p class="ca-modal-body">It should arrive within the next few minutes.</p>
+    <p class="ca-modal-body">If it hasn't appeared, please check your spam or promotions folder and mark the message as not spam, so future updates reach you.</p>
+    <p class="ca-modal-note">Your responses are saved to your profile. You can retake the assessment at any time.</p>
+    <button type="button" class="btn" onclick="closeSentModal()">Close</button>
+  </div>
+</div>
+<script>
+function openSentModal(email){
+  var m=document.getElementById("ca-sent"); if(!m) return;
+  var e=document.getElementById("ca-sent-email"); if(e){ e.textContent=email||"your inbox"; }
+  m.classList.add("open"); document.body.style.overflow="hidden";
+  var c=m.querySelector(".ca-modal-card"); if(c){ setTimeout(function(){ try{ c.focus(); }catch(e){} },80); }
+}
+function closeSentModal(){
+  var m=document.getElementById("ca-sent"); if(!m) return;
+  m.classList.remove("open"); document.body.style.overflow="";
+}
+document.addEventListener("keydown",function(ev){ if(ev.key==="Escape"){ closeSentModal(); } });
 </script>
 </body>
 </html>
