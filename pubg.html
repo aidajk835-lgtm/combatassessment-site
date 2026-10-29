@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PUBG: BATTLEGROUNDS — What's Your Combat Role?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0b0d; --panel:rgba(16,18,22,.82); --panel2:rgba(22,25,31,.9);
+  --line:#2a2f38; --accent:#f2a900; --accent-dim:#7a5600;
+  --text:#e8eaed; --muted:#8b929c; --amber:#f0a020; --green:#3ddc84;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+/* ==== GAME ART BACKGROUND ==== */
+#bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("assets/img/pubg_hero.webp");
+  background-size:cover;background-position:center top;
+  opacity:0;transition:opacity 1.2s ease;
+}
+#bg.loaded{opacity:1;}
+#bg-shade{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(45,35,8,.70) 0%, rgba(10,11,13,.87) 55%, rgba(10,11,13,.93) 100%),
+    radial-gradient(ellipse 90% 60% at 50% 0%, transparent 0%, rgba(10,11,13,.55) 100%);
+}
+#bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(242,169,0,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(242,169,0,.045) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+/* dim hero art while the pitch screen is active so copy stays legible */
+body:has(#s-pitch.active) #bg-shade{
+  background:
+    linear-gradient(180deg, rgba(10,11,13,.88) 0%, rgba(10,11,13,.90) 100%);
+}
+body:has(#s-pitch.active) #bg{opacity:.28 !important;}
+#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;}
+#progress-wrap{position:fixed;top:0;left:0;right:0;height:3px;background:#171a20;z-index:50;}
+#progress-bar{height:100%;width:0;background:var(--accent);transition:width .45s cubic-bezier(.7,0,.3,1);box-shadow:0 0 12px var(--accent);}
+#progress-label{position:fixed;top:10px;right:14px;font-family:'Saira Condensed';font-weight:600;font-size:13px;letter-spacing:2px;color:var(--muted);z-index:50;}
+.screen{display:none;flex:1;flex-direction:column;justify-content:flex-start;align-items:center;padding:64px 16px 52px;min-height:100vh;width:100%;}
+.screen.active{display:flex;animation:fadeUp .5s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.wrap{width:100%;max-width:680px;}
+.q-wrap{max-width:460px;margin:0 auto;text-align:center;}
+/* top-anchored hook (content starts near the top of the page) */
+body.panel-all #s-hook .wrap{text-shadow:0 2px 18px rgba(0,0,0,.9),0 1px 5px rgba(0,0,0,.85);}
+body.hook-center #s-hook .wrap{text-shadow:0 2px 18px rgba(0,0,0,.9),0 1px 5px rgba(0,0,0,.85);}
+.hook-card{width:190px;height:190px;border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:0 18px 50px rgba(0,0,0,.55);margin-bottom:22px;flex:0 0 auto;}
+.hook-card img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block;}
+body.hook-center #s-hook .wrap{text-shadow:0 2px 18px rgba(0,0,0,.9),0 1px 5px rgba(0,0,0,.85);}
+.kicker{font-family:'Inter',sans-serif;font-weight:600;font-size:11.5px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:8px;}
+h1{font-family:'Saira Condensed';font-weight:700;font-size:clamp(30px,6vw,50px);line-height:1;text-transform:uppercase;letter-spacing:.5px;}
+h2.q-title{font-family:'Saira Condensed';font-weight:700;font-size:clamp(22px,4.6vw,28px);line-height:1.15;margin-bottom:4px;text-transform:none;}
+.q-wrap h2.q-title,.q-wrap .q-sub,.q-wrap .kicker{text-shadow:0 2px 14px rgba(0,0,0,.95),0 1px 4px rgba(0,0,0,.9);}
+.q-sub{color:var(--muted);font-size:13.5px;font-weight:600;margin-bottom:18px;line-height:1.45;}
+.accent{color:var(--accent);}
+.lead{color:var(--muted);font-size:14.5px;line-height:1.6;margin-top:14px;max-width:560px;}
+.lead b{color:var(--text);}
+.game-tag{font-family:'Saira Condensed';font-weight:700;font-size:15px;letter-spacing:2px;border:1px solid var(--accent-dim);padding:7px 14px;color:var(--accent);background:var(--panel);text-transform:uppercase;display:inline-block;border-radius:999px;}
+.btn{display:inline-block;font-family:'Saira Condensed';font-weight:700;font-size:15px;letter-spacing:1.6px;text-transform:uppercase;text-decoration:none;text-align:center;background:var(--accent);color:#0a0b0d;border:none;border-radius:10px;padding:13px 28px;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(242,169,0,.45);}
+.btn.ghosted{background:transparent;border:1px solid var(--line);color:var(--muted);}
+.btn.ghosted:hover{border-color:var(--accent);color:var(--text);box-shadow:none;}
+.opts{display:flex;flex-direction:column;align-items:center;gap:9px;width:100%;}
+.opt{position:relative;display:flex;align-items:center;justify-content:center;gap:12px;width:min(340px,100%);min-height:48px;text-align:center;background:#fff;border:2px solid #fff;border-radius:12px;padding:11px 22px;cursor:pointer;color:#111;font-size:15.5px;font-weight:700;font-family:'Inter',sans-serif;transition:border-color .18s ease,background .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease,opacity .25s ease;}
+.opt:hover{border-color:var(--accent);background:var(--accent);color:#fff;transform:translateY(-1px);box-shadow:0 6px 18px rgba(242,169,0,.45);}
+.opt:active{transform:scale(.985);}
+.opt .ic{position:absolute;left:18px;top:50%;transform:translateY(-50%);flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:26px;font-size:22px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif;}
+.opt .txt{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;margin:0 22px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.opt.faded{opacity:.35;pointer-events:none;}
+.opt.picked{border-color:var(--accent);background:var(--accent);color:#fff;box-shadow:0 0 0 1px var(--accent),0 0 26px rgba(242,169,0,.45);}
+@media(max-width:520px){.opt{width:min(300px,100%);min-height:42px;gap:10px;padding:9px 16px;font-size:14.5px;}.opt .ic{left:14px;width:22px;font-size:19px;}.opt .txt{margin:0 18px;}}
+.hint{margin-top:28px;color:var(--muted);font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.hint::before{content:"";width:7px;height:7px;background:var(--accent);display:inline-block;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+.analyzing-box{width:100%;max-width:560px;text-align:left;}
+.term{background:rgba(12,14,17,.88);border:1px solid var(--line);padding:22px 24px;font-family:'Saira Condensed';font-size:17px;letter-spacing:1px;min-height:180px;border-radius:14px;}
+.term .line{color:var(--muted);padding:3px 0;display:flex;align-items:center;gap:10px;}
+.term .line.done{color:var(--green);}
+.term .line.active{color:var(--text);}
+.term .cursor{display:inline-block;width:9px;height:17px;background:var(--accent);animation:blink 1s infinite;vertical-align:middle;}
+.term .tick{color:var(--green);font-weight:700;}
+.analyzing-head{font-family:'Saira Condensed';font-weight:800;font-size:clamp(28px,6vw,44px);text-transform:uppercase;margin-bottom:18px;text-align:center;}
+.analyzing-head .accent{display:block;font-size:.45em;letter-spacing:4px;font-weight:700;}
+.result-badge{display:inline-block;font-family:'Saira Condensed';font-weight:700;font-size:13px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent-dim);padding:6px 14px;margin-bottom:14px;background:var(--panel);border-radius:999px;}
+.archetype{font-family:'Saira Condensed';font-weight:900;font-size:clamp(52px,11vw,100px);line-height:.92;text-transform:uppercase;text-shadow:0 4px 40px rgba(0,0,0,.8);}
+.archetype-sub{font-family:'Saira Condensed';font-weight:600;font-size:clamp(18px,4vw,26px);color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-top:6px;}
+.match-num{font-family:'Saira Condensed';font-weight:800;font-size:22px;margin-top:14px;color:var(--muted);}
+.match-num b{color:var(--green);font-size:30px;}
+.char-art{margin:30px auto 0;max-width:560px;border:1px solid var(--line);box-shadow:0 24px 70px rgba(0,0,0,.65);overflow:hidden;border-radius:18px;}
+.char-art img{width:100%;height:auto;display:block;border-radius:18px;}
+.bars{margin:30px 0 8px;display:flex;flex-direction:column;gap:14px;width:100%;}
+.bar-row .bar-top{display:flex;justify-content:space-between;font-family:'Saira Condensed';font-weight:700;font-size:15px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.bar-row .bar-top span:last-child{color:var(--muted);}
+.bar-track{height:10px;background:rgba(21,24,29,.8);border:1px solid var(--line);width:100%;border-radius:999px;overflow:hidden;}
+.bar-fill{height:100%;width:0;background:var(--accent);transition:width 1.1s cubic-bezier(.2,.8,.2,1);border-radius:999px;}
+.bar-row.dim .bar-fill{background:#4a5160;}
+.bar-row.dim .bar-top{color:var(--muted);}
+.section-title{font-family:'Saira Condensed';font-weight:800;font-size:22px;letter-spacing:2px;text-transform:uppercase;margin:40px 0 14px;padding-left:14px;border-left:4px solid var(--accent);}
+.analysis-p{color:#c6ccd4;line-height:1.75;font-size:16px;margin-bottom:16px;}
+.analysis-p b{color:var(--text);}
+.insight{display:flex;gap:14px;background:var(--panel);border:1px solid var(--line);padding:16px 18px;margin-bottom:10px;align-items:flex-start;backdrop-filter:blur(4px);border-radius:14px;}
+.insight .ic{font-size:20px;line-height:1.3;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif;}
+.insight p{color:#c6ccd4;font-size:15px;line-height:1.6;}
+.insight p b{color:var(--text);}
+.game-callout{margin-top:26px;border:1px solid var(--accent-dim);background:linear-gradient(180deg,rgba(45,35,8,.70),rgba(10,11,13,.7));padding:20px 22px;backdrop-filter:blur(4px);border-radius:14px;}
+.game-callout .gc-title{font-family:'Saira Condensed';font-weight:800;font-size:16px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+.game-callout p{color:#c6ccd4;font-size:15px;line-height:1.65;}
+.pitch-list{margin:26px 0 10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;width:100%;}
+.pitch-item{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:linear-gradient(180deg,rgba(16,18,22,.9),rgba(10,11,13,.85));border:1px solid var(--line);padding:24px 22px 20px;backdrop-filter:blur(4px);border-radius:18px;}
+.pitch-item .pi-icon{display:flex;align-items:center;justify-content:center;width:46px;height:46px;font-size:30px;line-height:1;background:none;border:0;box-shadow:none;margin:0 auto;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif;}
+.pitch-item.pi-last .pi-icon{background:none;border:0;box-shadow:none;font-size:30px;width:46px;height:46px;}
+.pitch-item .pi-head{min-height:2.64em;font-family:'Saira Condensed';font-weight:800;font-size:18px;line-height:1.32;letter-spacing:.3px;color:var(--text);margin:0;}
+.pitch-item .pi-body{font-size:14.5px;color:#c6ccd4;line-height:1.62;margin:0;}
+@media(max-width:720px){.pitch-list{grid-template-columns:1fr;gap:12px;}.pitch-item{padding:18px 18px 16px;}}
+/* ===== Research panel (hello-nancy authority card) ===== */
+.rn-badges{text-align:center;font-family:'Saira Condensed';font-weight:800;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:24px;}
+#s-research .kicker{text-align:center;}
+.rn-badges b{color:var(--accent);}
+/* Unified authority layout: Travis's portrait is the screen background, centered,
+   with the game art fading to black around it; the text block sits in the black
+   field under his chest, centered. Mirrors the mobile treatment at every width. */
+#s-research{
+  background-color:#000;
+  background-image:url("assets/img/travis-haley-mobile.webp");
+  background-repeat:no-repeat;
+  background-position:center -3.5vh;
+  background-size:auto 74vh;
+  padding:calc(15vh - 49px) 16px 22px;
+}
+#s-research .footer-brand{margin-top:22px;}
+.rn-card{margin:calc(38vh - 36px) auto 0;max-width:440px;text-align:center;}
+.rn-photo{display:none;}
+.rn-row{display:block;}
+.rn-col{display:flex;flex-direction:column;align-items:center;text-align:center;}
+.rn-name{font-family:'Saira Condensed';font-weight:900;font-size:clamp(26px,4.4vw,34px);letter-spacing:.6px;text-transform:uppercase;color:#fff;line-height:1.04;order:2;margin-top:16px;}
+.rn-title{font-family:'Saira Condensed';font-weight:700;font-size:13.5px;letter-spacing:1.3px;text-transform:uppercase;color:#cfd6df;margin-top:6px;line-height:1.5;order:3;}
+.rn-quote{margin:0;font-size:18px;line-height:1.5;color:rgba(244,246,248,.84);font-weight:700;letter-spacing:.2px;order:1;}
+.rn-source{font-size:12.5px;line-height:1.62;color:#aab3bf;margin:12px 0 0;font-style:italic;order:4;}
+.rn-source b{color:#e7ecf1;font-style:normal;}
+.rn-arw{margin-left:10px;font-weight:400;transition:transform .16s ease;}
+.btn:hover .rn-arw{transform:translateX(4px);}
+.rn-cta{display:block;width:fit-content;margin:18px auto 0;}
+/* ==== MOBILE RESEARCH: full-bleed portrait, black field carries the text ====
+   Desktop keeps the avatar-tile card. On phones the square tile is dropped and the
+   portrait becomes the screen background; the header stays in the reserved black band
+   above his head, and the pull-quote / name / role / source drop into the black field
+   under his chest. 78vh tops him at 0.254H (head clear of the header at all heights)
+   and puts his chest line at 0.496H, so the text block is offset by vh to stay pinned
+   just below it on every screen height. */
+@media(max-width:600px){
+  #s-research{
+    background-color:#000;
+    background-image:url("assets/img/travis-haley-mobile.webp");
+    background-repeat:no-repeat;
+    background-position:center -7.5vh;
+    background-size:auto 78vh;
+    padding:26px 18px 16px;
+  }
+  #s-research .kicker{margin-bottom:6px;font-size:10.5px;letter-spacing:1.6px;}
+  .rn-badges{margin-bottom:0;font-size:10.5px;letter-spacing:1.4px;line-height:1.45;}
+  .rn-card{margin-top:calc(38vh - 40px);text-align:center;}
+  .rn-photo{display:none;}
+  .rn-row{display:block;}
+  .rn-col{align-items:center;text-align:center;}
+  .rn-quote{order:1;margin:0;font-size:18px;line-height:1.52;letter-spacing:.1px;color:rgba(244,246,248,.84);}
+  .rn-name{order:2;margin-top:12px;font-size:21px;letter-spacing:.9px;}
+  .rn-title{order:3;margin-top:5px;font-size:10.5px;letter-spacing:1.1px;line-height:1.5;color:#aeb8c4;}
+  .rn-source{order:4;margin:8px 0 0;font-size:10.5px;line-height:1.55;font-style:italic;color:#8d97a3;}
+  .rn-source b{font-style:normal;}
+  .rn-cta{margin:14px auto 0;}
+  #s-research .footer-brand{margin-top:12px;padding-top:13px;font-size:10.5px;letter-spacing:1.2px;}
+}
+/* short phones (SE / 8 / older Android): pull the portrait back to 70vh and tighten the
+   type so the Continue button still clears the fold — chest line lands at 0.445H, which
+   keeps the same "just under his chest" offset as the taller phones above. */
+@media(max-width:600px) and (max-height:730px){
+  #s-research{background-size:auto 70vh;background-position:center -5.5vh;}
+  .rn-card{margin-top:calc(35vh - 40px);}
+  .rn-quote{font-size:16px;line-height:1.5;}
+  .rn-name{margin-top:12px;font-size:19px;}
+  .rn-title{font-size:10px;}
+  .rn-source{margin-top:8px;font-size:10px;line-height:1.5;}
+  .rn-cta{margin:14px auto 0;padding:11px 24px;}
+  #s-research .footer-brand{margin-top:14px;padding-top:12px;}
+}
+/* short desktop / landscape laptops: pull the portrait in and tighten spacing so
+   the Continue button + footer still clear the fold */
+@media(max-height:800px) and (min-width:601px){
+  #s-research{background-size:auto 70vh;padding-bottom:14px;}
+  .rn-card{margin-top:calc(35vh - 34px);}
+  .rn-quote{font-size:18px;}
+  .rn-name{font-size:26px;}
+  .rn-title{font-size:12px;}
+  .rn-source{font-size:11.5px;}
+  .rn-cta{margin-top:18px;}
+  #s-research .footer-brand{margin-top:18px;}
+}
+.pitch-visual{position:relative;width:min(580px,100%);margin:30px auto 4px;border-radius:20px;overflow:hidden;border:1px solid var(--line);box-shadow:0 30px 70px rgba(0,0,0,.65);}
+.pitch-visual img{display:block;width:100%;height:auto;}
+.pitch-visual .pv-fade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(10,11,13,.5) 0%,rgba(10,11,13,0) 26%,rgba(10,11,13,.1) 58%,rgba(10,11,13,.88) 100%);}
+.pitch-visual .pv-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 7% 7%;transform:translateY(-4%);pointer-events:none;}
+.pitch-visual .pv-text span{font-family:'Saira Condensed';font-weight:900;font-style:italic;font-size:clamp(30px,5.6vw,50px);line-height:1.02;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;text-shadow:0 4px 30px rgba(0,0,0,.9),0 2px 6px rgba(0,0,0,.95);}
+.pitch-visual .pv-cap{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-family:'Saira Condensed';font-weight:800;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,.55);}
+.pitch-item p{font-size:15px;color:#c6ccd4;line-height:1.6;}
+.pitch-item p b{color:var(--text);}
+/* ===== Product recommendation cards (EDM-style grid) ===== */
+#cta-cards{width:100%;display:grid;grid-template-columns:repeat(2,1fr);gap:18px;align-items:stretch;}
+@media(max-width:720px){#cta-cards{grid-template-columns:1fr;gap:14px;}}
+#cta-cards .rec-card{background:#14171d;border:1px solid var(--line);border-radius:20px;overflow:hidden;text-decoration:none;display:flex;flex-direction:column;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;backdrop-filter:blur(4px);}
+#cta-cards .rec-card:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 16px 40px rgba(0,0,0,.5);}
+#cta-cards .rec-card .rc-media{background:#fff;height:190px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto;}
+#cta-cards .rec-card .rc-media img{width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;padding:4px;display:block;}
+#cta-cards .rec-card .rc-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;padding:14px 18px 16px;text-align:left;}
+#cta-cards .rec-card .rc-name{font-family:'Saira Condensed';font-weight:800;font-size:19px;letter-spacing:.8px;text-transform:uppercase;color:#ffffff;line-height:1.12;display:block;}
+#cta-cards .rec-card .rc-ingame{font-family:'Saira Condensed';font-weight:700;font-size:11.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--accent);margin-top:5px;}
+#cta-cards .rec-card .rc-ingame::before{content:"// IN-GAME: ";}
+#cta-cards .rec-card p{color:var(--muted);font-size:13.5px;line-height:1.62;margin:9px 0 14px;flex:1 1 auto;}
+#cta-cards .rec-card p b{color:var(--text);}
+#cta-cards .rec-card .rc-foot{margin-top:auto;display:flex;justify-content:flex-end;align-items:center;gap:10px;}
+#cta-cards .rec-card .rc-price{font-family:'Saira Condensed';font-weight:700;font-size:17px;letter-spacing:1px;color:var(--green);white-space:nowrap;}
+#cta-cards .rec-card .rc-btn{display:inline-block;background:#f2a900;color:#fff;font-family:'Saira Condensed';font-weight:800;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;padding:9px 22px;border-radius:999px;white-space:nowrap;line-height:1;}
+#cta-cards .rec-card.plain{grid-column:1/-1;display:block;background:linear-gradient(180deg,rgba(16,18,22,.92),rgba(10,11,13,.88));}
+#cta-cards .rec-card.plain .rc-top{padding:15px 18px 0;}
+#cta-cards .rec-card.plain p{padding:8px 18px 16px;flex:none;}
+@media(max-width:720px){#cta-cards .rec-card.plain{grid-column:auto;}}
+.safety-note{margin-top:26px;border:1px solid var(--line);padding:14px 18px;color:var(--muted);font-size:12.5px;line-height:1.65;letter-spacing:.3px;background:var(--panel);backdrop-filter:blur(4px);border-radius:14px;}
+.safety-note b{color:var(--amber);}
+.footer-brand{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);width:100%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:var(--muted);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-family:'Saira Condensed';font-weight:600;}
+.footer-brand a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);}
+.footer-brand a:hover{color:var(--accent);}
+.actions-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;}
+#cta-cards{width:100%;}
+#cta-cards .rec-card,#cta-cards .rec-card .rc-body{text-align:left;}
+.email-box{width:min(520px,100%);margin:28px auto 0;border:1px solid var(--line);border-radius:18px;padding:22px 24px;background:linear-gradient(180deg,rgba(16,18,22,.9),rgba(10,11,13,.85));backdrop-filter:blur(6px);text-align:center;}
+.email-box .eb-head{font-family:'Saira Condensed';font-weight:800;font-size:20px;letter-spacing:1.5px;text-transform:uppercase;}
+.email-box .eb-sub{color:var(--muted);font-size:13px;line-height:1.6;margin:8px 0 16px;}
+.email-box form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.email-box input{flex:1;min-width:220px;background:#0b0e13;border:1px solid var(--line);color:var(--text);padding:12px 14px;border-radius:12px;font-size:14px;}
+.email-box input:focus{outline:none;border-color:var(--accent);}
+.email-box .eb-ok{color:var(--green);font-size:14px;font-weight:600;padding:8px 0;}
+@media(max-width:520px){.email-box form{flex-direction:column;}.email-box input{min-width:0;}}
+
+.airsoft-intro{margin:30px auto 0;max-width:680px;text-align:center;background:linear-gradient(180deg,rgba(16,18,22,.9),rgba(10,11,13,.86));border:1px solid var(--line);border-radius:18px;padding:14px 14px 18px;backdrop-filter:blur(6px);}
+.airsoft-intro .ai-img{display:block;width:100%;height:auto;border-radius:14px;}
+.airsoft-intro .ai-img:hover{opacity:.92;}
+.airsoft-intro a.ai-link{display:inline-block;margin-top:14px;color:var(--accent);font-family:'Saira Condensed';font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:13px;text-decoration:none;border-bottom:1px solid var(--accent);padding-bottom:2px;}
+.airsoft-intro a.ai-link:hover{color:#fff;border-color:#fff;}
+</style>
+</head>
+<body class="panel-all hook-center">
+<div id="bg"></div><div id="bg-shade"></div><div id="bg-grid"></div>
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="progress-label"></div>
+<div id="app">
+
+  <!-- HOOK -->
+  <section class="screen active" id="s-hook">
+    <div class="wrap panelized" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+      <div class="kicker">// 60-second survivor assessment</div>
+      
+      <div class="hook-card"><img src="assets/img/pubg-hero.webp" alt="PUBG: BATTLEGROUNDS" onerror="this.parentNode.style.display='none'"></div>
+      <p class="lead" style="text-align:center;">Every squad has <b>that one role</b> you were born to fill. Answer 8 questions and we'll decode your Battlegrounds role — the position you should main, based on how your brain actually works in the final circle.</p>
+      <button class="btn" style="margin-top:28px;" onclick="startQuiz()">Begin Assessment</button>
+      <div class="hint">Selecting an option moves you to the next step</div>
+      <div class="footer-brand"><span>Operator Role Assessment</span><span><a href="index.html">Other games</a></span></div>
+    </div>
+  </section>
+
+  <!-- QUESTIONS (injected) -->
+  <div id="question-screens"></div>
+
+  <!-- ANALYZING -->
+  <section class="screen" id="s-analyzing">
+    <div class="wrap" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="analyzing-head"><span class="accent">// Processing</span>Assessing Your Survivor Profile</div>
+      <div class="analyzing-box">
+        <div class="term" id="term"></div>
+        <button class="btn" id="reveal-btn" style="display:none;margin-top:22px;width:100%;" onclick="showResult()">Reveal My Role</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section class="screen" id="s-result">
+    <div class="wrap">
+      <div style="text-align:center;">
+        <div class="result-badge" id="r-badge"></div>
+        <div class="archetype" id="r-name"></div>
+        <div class="archetype-sub" id="r-sub"></div>
+        <div class="match-num">Role match: <b id="r-match"></b></div>
+      </div>
+      <div class="char-art" id="r-char" style="display:none;"><img id="r-char-img" alt="Character" onerror="imgRetry(this)"></div>
+      <div class="bars" id="r-bars"></div>
+      <div class="section-title">Your Personality Analysis</div>
+      <div id="r-analysis"></div>
+      <div class="section-title">What Your Answers Reveal</div>
+      <div id="r-insights"></div>
+      <div class="game-callout" id="r-game"></div>
+      <div class="actions-row" style="justify-content:center;margin-top:34px;">
+        <button class="btn" onclick="go('s-pitch')">Continue</button>
+        <button class="btn ghosted" onclick="restart()">Retake</button>
+      </div>
+      <div class="footer-brand"><span>Operator Role Assessment</span><span><a href="index.html">Other games</a></span></div>
+    </div>
+  </section>
+
+  <!-- PITCH -->
+  <section class="screen" id="s-pitch">
+    <div class="wrap" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+      <div class="kicker">// The uncomfortable truth</div>
+      <h2 class="q-title" style="font-size:clamp(28px,5.8vw,46px);text-transform:uppercase;font-weight:800;letter-spacing:.5px;">The circle <span class='accent'>doesn't care about your rank.</span></h2>
+      <p class="lead" style="margin-bottom:6px;">Here's the PUBG rule: <b>your aim is borrowed. The hands are yours.</b> Nobody drops hot ready — they earn it. The instincts your answers just revealed are real. They just need a physical home.</p>
+      <div class="pitch-visual">
+        <img src="assets/img/transition-real-life.webp" alt="A gamer drawing a white PlayStation controller from his jeans pocket while an armed robbery happens behind him — real life is not a game." decoding="async" onerror="window.imgRetry&&imgRetry(this)">
+        <div class="pv-fade"></div>
+        <div class="pv-text"><span>Real life is not a game.</span></div>
+      </div>
+      <div class="pitch-list"><div class="pitch-item"><span class="pi-icon">🏃</span><p class="pi-head">Every fight is a contact.</p><p class="pi-body">No cover to peek, no teammate to lean on. You learn the angle, not the spray.</p></div><div class="pitch-item"><span class="pi-icon">🫁</span><p class="pi-head">Breathe, or lose the shot.</p><p class="pi-body">PUBG teaches recoil. Airsoft teaches the breath that kills it.</p></div><div class="pitch-item"><span class="pi-icon">🪖</span><p class="pi-head">The transfer is real.</p><p class="pi-body">Airsoft converts drop-zone instinct into field craft — and brings you back reading flanks ahead.</p></div><div class="pitch-item pi-last"><span class="pi-icon">🚫</span><p class="pi-head">The circle shrinks once.</p><p class="pi-body">No redeploy when it closes. Rehearse the movement on a field first.</p></div></div>
+      <div class="actions-row" style="margin-top:26px;justify-content:center;">
+        <button class="btn" onclick="go('s-research')">See The Research &rarr;</button>
+      </div>
+      <div class="footer-brand"><span>Operator Role Assessment</span><span><a href="index.html">Other games</a></span></div>
+    </div>
+  </section>
+
+  <!-- RESEARCH / AUTHORITY (hello-nancy style) -->
+  <section class="screen" id="s-research">
+    <div class="wrap">
+      <div class="kicker">// Why the reps transfer</div>
+      <div class="rn-badges">Backed by research <b>&middot;</b> Recommended by professionals</div>
+      <div class="rn-card">
+        <div class="rn-row">
+          <div class="rn-photo">
+            <img class="rn-avatar" src="assets/img/travis-haley.webp" alt="Travis Haley, Founder, Haley Strategic Partners" width="200" height="200" loading="lazy" decoding="async" onerror="this.style.display='none'">
+          </div>
+          <div class="rn-col">
+            <div class="rn-name">Travis Haley</div>
+            <div class="rn-title">Former Force Recon Marine &amp; ex-CEO of Magpul Dynamics &mdash;&nbsp;<span style="white-space:nowrap">Founder, Haley Strategic Partners</span></div>
+            <blockquote class="rn-quote">“There’s absolutely a crossover if you train correctly with airsoft. … The airsoft gun is going to tell you if your trigger control is off quicker than your live-fire gun. … Tactical reloading and speed reloading — very consistent, very much of a crossover right here. Magazine inserts just like a live-fire gun.”</blockquote>
+            <div class="rn-source"><b>Source:</b> Haley, T. (2011). <i>Travis Haley: Airsoft X Training</i> [Video]. Haley Strategic Partners. Retrieved from <a href='https://www.youtube.com/watch?v=87uj5_2hEGk' target='_blank' rel='noopener'>youtube.com/watch?v=87uj5_2hEGk</a></div>
+          </div>
+        </div>
+        <button class="btn rn-cta" onclick="go('s-cta')">I want to be more than just a game</button>&nbsp;<span class="rn-arw" aria-hidden="true">&#8594;</span></button>
+      </div>
+      <div class="footer-brand"><span>Operator Role Assessment</span><span><a href="index.html">Other games</a></span></div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="screen" id="s-cta">
+    <div class="wrap" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+      <div class="kicker">// Your training blueprint</div>
+      <h2 class="q-title" style="font-size:clamp(28px,5.8vw,46px);text-transform:uppercase;font-weight:800;letter-spacing:.5px;">Train like the <span class="accent" id="cta-role"></span><br>you already are.</h2>
+      <p class="lead" id="cta-lead" style="margin-bottom:26px;">Every survivor starts with their primary. Based on your assessment, <b>{ctaLine}</b> — the physical counterpart to your role. Practice with the replica first. Master it. Then watch what happens to your dinners.</p>
+      <div id="cta-cards"></div>
+            <div class="airsoft-intro">
+        <a href="https://www.redwolfairsoft.com/what-is-airsoft" target="_blank" rel="noopener"><img class="ai-img" src="assets/img/what-is-airsoft.webp" alt="What is Airsoft?" loading="lazy" decoding="async"></a>
+        <a class="ai-link" href="https://www.redwolfairsoft.com/what-is-airsoft" target="_blank" rel="noopener">Read the full guide &rarr;</a>
+      </div>
+
+      <div class="safety-note"><b>Safety briefing:</b> Airsoft replicas are not toys. Always wear proper eye protection, follow your local airsoft field rules and check your region's age and ownership laws before purchasing. Players under 18 — bring a parent or guardian into this. They'll want in anyway.</div>
+      <div class="email-box" id="email-box">
+        <div class="eb-head">📬 Your Operator File — by email</div>
+        <p class="eb-sub">Get your full role breakdown, your recommended platform list, and first-access deals. One email. Unsubscribe anytime.</p>
+        <form id="email-form" autocomplete="off" onsubmit="return false;">
+          <input type="email" id="email-in" placeholder="you@example.com" required>
+          <button type="submit" class="btn" id="email-btn">Send Me My File</button>
+        </form>
+        <div class="eb-ok" id="email-ok" style="display:none;">✅ Locked in. Watch your inbox for your Operator File — we'll send training notes and deals for your platform.</div>
+      </div>
+      <div class="actions-row" style="margin-top:30px;justify-content:center;">
+        <button class="btn" onclick="go('s-result')">&larr; Back to My Analysis</button>
+        <button class="btn ghosted" onclick="restart()">Retake Assessment</button>
+      </div>
+      <div class="footer-brand"><span>Operator Role Assessment</span></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const PRODUCTS = {"tm_strike_warrior": {"name": "Tokyo Marui Strike Warrior 1911 GBB", "ingame": "1911", "price": 125.99, "url": "https://redwolfairsoft.com/redwolf/airsoft/Gas_Pistols_SMGs_Tokyo_Marui_Tokyo_Marui_Strike_Warrior.htm", "img": "assets/img/tm_strike_warrior.webp"}, "tm_deagle_chrome": {"name": "Tokyo Marui Desert Eagle .50AE Chrome GBB", "ingame": "Desert Eagle", "price": 139.99, "url": "https://redwolfairsoft.com/redwolf/airsoft/ProductDetail?prodID=13346", "img": "assets/img/tm_deagle_chrome.webp"}, "tm_m40a5_fde": {"name": "Tokyo Marui M40A5 Sniper \u2014 FDE", "ingame": "M40A5", "price": 279.99, "url": "https://www.redwolfairsoft.com/sniper-rifles-tokyo-marui-tokyo-marui-m40a5-bolt-action-sniper-rifle-flat-dark-earth.html", "img": "assets/img/tm_m40a5_fde.webp"}, "scar_h_tan": {"name": "FN SCAR-H GBBR \u2014 Tan", "ingame": "SCAR-H", "price": 305.49, "url": "https://www.redwolfairsoft.com/cybergun-fn-scar-h-gbbr-tan-by-vfc.html", "img": "assets/img/scar_h_tan.webp"}, "mp5sd3": {"name": "H&K MP5SD3 GBB (VFC)", "ingame": "MP5SD", "price": 449.99, "url": "https://www.redwolfairsoft.com/umarex-h-k-mp5-sd3-early-type-gbbr-v2-asia-edition-by-vfc.html", "img": "assets/img/mp5sd3.webp"}, "g36c": {"name": "Tokyo Marui G36C Plus AEG", "ingame": "G36C", "price": 264.99, "url": "https://www.redwolfairsoft.com/tokyo-marui-g36c-plus-airsoft-aeg.html", "img": "assets/img/g36c.webp"}, "m870_beanbag": {"name": "CYMA M870 Breacher Shotgun (CM351)", "ingame": "Beanbag Shotgun", "price": 64.99, "url": "https://www.redwolfairsoft.com/cyma-m870-3-round-brust-multi-shot-shell-loading-airsoft-shotgun-pistol-grip-cm351.html", "img": "assets/img/m870_beanbag.webp"}, "g19_gen5": {"name": "Glock 19 Gen5 GBB (VFC)", "ingame": "Glock 19", "price": 120.31, "url": "https://www.redwolfairsoft.com/umarex-glock-19-gen-5-gbb-airsoft-pistol-by-vfc.html", "img": "assets/img/g19_gen5.webp"}, "hk416a5_tan": {"name": "H&K 416A5 AEG \u2014 Tan", "ingame": "HK416", "price": 399.99, "url": "https://www.redwolfairsoft.com/electric-guns-aeg-aep-umarex-umarex-hk416-a5-aeg-asia-edition-tan-by-vfc.html", "img": "assets/img/hk416a5_tan.webp"}, "tm_scarl_mk16": {"name": "Tokyo Marui SCAR-L MK16", "ingame": "SCAR-L", "price": 441.74, "url": "https://www.redwolfairsoft.com/aeg-aep-tokyo-marui-recoil-shock-series-tokyo-marui-scar-l-mk-16-mod-0-flat-black-recoil-shock.html", "img": "assets/img/tm_scarl_mk16.webp"}, "ump9_dx": {"name": "H&K UMP9 DX GBB", "ingame": "UMP", "price": 239.99, "url": "https://www.redwolfairsoft.com/gbb-rifles-smgs-umarex-umarex-vfc-ump9-dx-gbb-asia-edition.html", "img": "assets/img/ump9_dx.webp"}, "fiveseven_tan": {"name": "FN Five-seveN GBB \u2014 Tan", "ingame": "Five-seveN", "price": 107.99, "url": "https://www.redwolfairsoft.com/cybergun-fn-herstal-licensed-five-seven-gbb-airsoft-pistol-tan.html", "img": "assets/img/fiveseven_tan.webp"}, "gg_g980_se": {"name": "G&G G980 SE Kar98k", "ingame": "Kar98k", "price": 341.99, "url": "https://www.redwolfairsoft.com/g-g-g980-se.html", "img": "assets/img/gg_g980_se.webp"}, "ares_kar98k": {"name": "ARES Kar98k \u2014 Steel Ver.", "ingame": "Kar98k", "price": 499.99, "url": "https://www.redwolfairsoft.com/ares-kar98k-spring-steel-version.html", "img": "assets/img/ares_kar98k.webp"}, "krytac_vector": {"name": "KRYTAC Kriss Vector AEG", "ingame": "Vector", "price": 433.99, "url": "https://www.redwolfairsoft.com/electric-guns-aeg-aep-krytac-krytac-kriss-vector-aeg-limited-edition.html", "img": "assets/img/krytac_vector.webp"}, "hk416d_cgs": {"name": "Umarex HK416D GBB (CGS)", "ingame": "M416", "price": 431.19, "url": "https://www.redwolfairsoft.com/umarex-lightning-series-hk416d-gbb-airsoft-rifle-black-by-cgs.html", "img": "assets/img/hk416d_cgs.webp"}, "cyma_akm": {"name": "CYMA AKM \u2014 Wood & Steel", "ingame": "AKM", "price": 175.99, "url": "https://www.redwolfairsoft.com/cyma-akm-airsoft-aeg-rifle-metal-hi-power-wood-version-cm048m.html", "img": "assets/img/cyma_akm.webp"}, "m249_para": {"name": "A&K M249 PARA", "ingame": "M249", "price": 371.99, "url": "https://www.redwolfairsoft.com/a-k-m249-para-light-machine-gun-aeg-black.html", "img": "assets/img/m249_para.webp"}, "m249_mkii": {"name": "A&K M249 MKII", "ingame": "M249", "price": 371.99, "url": "https://www.redwolfairsoft.com/a-k-m249-mkii-light-machine-gun-aeg-black.html", "img": "assets/img/m249_mkii.webp"}, "gg_g980_co2": {"name": "G&G G980 Kar98k \u2014 CO2", "ingame": "Kar98k", "price": 407.99, "url": "https://www.redwolfairsoft.com/classic-rifles-g-g-g-g-g980.html", "img": "assets/img/gg_g980_co2.webp"}, "ka_svd": {"name": "King Arms SVD Dragunov", "ingame": "Dragunov", "price": 211.19, "url": "https://www.redwolfairsoft.com/king-arms-svd-dragunov-airsoft-aeg-sniper-rifle-ultra-grade-black.html", "img": "assets/img/ka_svd.webp"}, "mp7_vfc": {"name": "H&K MP7 GBB (VFC)", "ingame": "MP7", "price": 249.99, "url": "https://www.redwolfairsoft.com/gbb-rifles-smgs-umarex-umarex-vfc-mp7-smg-gbbr-v2-asia-edition.html", "img": "assets/img/mp7_vfc.webp"}, "m4a1_salvo": {"name": "DD M4A1 RIS III GBB", "ingame": "M4A1", "price": 386.99, "url": "https://www.redwolfairsoft.com/salvo-precision-daniel-defense-m4a1-ris-iii-gbb-airsoft-rifle.html", "img": "assets/img/m4a1_salvo.webp"}, "scarl_cyma": {"name": "FN SCAR-L AEG \u2014 Tan", "ingame": "SCAR-L", "price": 190.79, "url": "https://www.redwolfairsoft.com/cybergun-fn-scar-l-airsoft-aeg-rifle-tan-metal-version-cm063-by-cyma.html", "img": "assets/img/scarl_cyma.webp"}, "m249_mki": {"name": "A&K M249 MKI SAW", "ingame": "M249", "price": 389.99, "url": "https://www.redwolfairsoft.com/a-k-m249-mki-saw-airsoft-lmg-aeg-black.html", "img": "assets/img/m249_mki.webp"}};
+const CONFIG = {"questions": [{"title": "Plane just took off. <span class='accent'>Where you dropping?</span>", "sub": "Instinct. Don't overthink it.", "opts": [["Pochinki. Fight for it.", "Hot drop, first gun wins. It always does.", {"brawler": 2}], ["Georgopol containers.", "Contestable loot, early 1v1s, gear first.", {"heavy": 1, "fixer": 1}], ["Military base. Far side.", "Big loot, big patience, long nerves.", {"scout": 2}], ["Wherever the plane ends.", "Rotate smart, stay balanced, stay alive.", {"soldier": 1, "stealth": 1}]], "icons": ["hotdrop", "containers", "map_pin_star", "plane"]}, {"title": "Boots down. <span class='accent'>First loot priority?</span>", "sub": "Fists only. Six houses in view. Go.", "opts": [["Any gun. ANY gun.", "A P1911 beats fists. Contact is coming.", {"brawler": 2}], ["Level 3 helmet + vest.", "Survivability is a personality trait.", {"fixer": 1, "soldier": 1}], ["Kar98 + 8x scope.", "The drop is just the loading screen.", {"scout": 2}], ["A vehicle.", "Mobility is the real weapon. Ask any pro.", {"soldier": 2}]], "icons": ["pistol", "helmet", "sniper_rifle", "vehicle"]}, {"title": "Second circle closing. <span class='accent'>What's your play?</span>", "sub": "Zone's pulling away from you. Everyone's rotating.", "opts": [["Rotate early. Own center.", "Wars are won before the first shot.", {"soldier": 2}], ["Ride the edge. Ambush.", "Let them fight. You ambush the survivors.", {"stealth": 2}], ["Third-party the fight", "They're weak. It's free real estate.", {"brawler": 1, "heavy": 1}], ["Fortify the compound", "A house with stairs is a fortress.", {"heavy": 1, "fixer": 1}]], "icons": ["rotate_center", "edge_ride", "third_party", "fortify"]}, {"title": "Pick your <span class='accent'>dream loadout</span>", "sub": "Only one. Choose like it's the final circle.", "opts": [["Kar98 + 8x, ghillie suit.", "One rifle. One round. One chicken dinner.", {"scout": 2}], ["Beryl M762 + red dot.", "If they hear me, I'm already too close.", {"brawler": 1, "heavy": 1}], ["M416 + full Lv3 set", "Balance is a weapon in itself.", {"soldier": 2}], ["M249 + boxes of ammo.", "Suppression is a love language.", {"heavy": 2}]], "icons": ["ghillie", "rifle_redot", "rifle_full", "m249"]}, {"title": "Your squad describes you <span class='accent'>as…</span>", "sub": "Be honest. They talk about you when you're muted.", "opts": [["\"The all-rounder\"", "Any gun, any role, any circle. Reliable.", {"soldier": 2}], ["\"The fragger\"", "Fearless or unhinged. Maybe both.", {"brawler": 2}], ["\"Hears everything\"", "You called the flank before the footsteps rendered.", {"scout": 2}], ["\"The gear guy\"", "Your squad's vests are always repaired first.", {"fixer": 2}]], "icons": ["headset", "grenade", "scope", "anchor"]}, {"title": "Two squads left. <span class='accent'>Nothing has happened</span> for 2 minutes.", "sub": "The blue zone is a rumor. The silence is getting loud.", "opts": [["Hold. Let them slip up.", "Patience is a weapon with a scope on it.", {"scout": 1, "stealth": 1}], ["Smoke and push. Now.", "Standing still is how you lose.", {"brawler": 2}], ["Rotate to the winning hill", "If nothing's happening, we're controlling it.", {"soldier": 2}], ["Pre-fire the treeline", "Let them feel us before they see us.", {"heavy": 2}]], "icons": ["eye_hold", "smoke_push", "hill_flag", "muzzle_flash"]}, {"title": "Final circle. <span class='accent'>1v1. Half your HP.</span>", "sub": "This is the moment that defines you.", "opts": [["Prone. One shot. Dinner.", "Pressure is where you're sharpest.", {"scout": 2}], ["Frag out, push the bang.", "They think they have you. They don't.", {"brawler": 2}], ["Bait. Count. Ambush.", "Panic is for people without a trap set.", {"stealth": 2}], ["Full auto at the edge", "They get nothing while you're breathing.", {"heavy": 2}]], "icons": ["prone_shot", "grenade_pin", "hook_bait", "full_auto"]}, {"title": "Your best <span class='accent'>chicken dinner</span> would end with…", "sub": "The clip your squad still talks about.", "opts": [["800m headshot, unseen", "They watched the replay twice. Still confused.", {"scout": 2}], ["Solo squad wipe, one house", "Over before they heard it.", {"brawler": 2}], ["A 90-second called flank", "You predicted the future, then shot it.", {"fixer": 1, "soldier": 1}], ["One house vs three squads", "You didn't kill them. You deleted their will.", {"heavy": 2}]], "icons": ["headshot", "squad_wipe", "clock_arrow", "house_shield"]}], "archetypes": {"soldier": {"name": "SOLDIER TYPE", "sub": "Well-Rounded. Balanced. Battle-Ready.", "traits": [["Versatility", 95], ["Consistency", 93], ["Adaptability", 91]], "analysis": ["Your answers point to the role every winning squad is built on: <b>the well-rounded Soldier Type.</b> You don't gamble on one gimmick — you take the M416, the Lv3 set, the smart rotation, and you show up useful in every phase of the match. Early game, mid game, final circle: there is no moment where your squad looks at you and wonders what you're for.", "Here's the thing most players miss: <b>balanced gameplay is the hardest style to counter.</b> Hot-droppers can be baited, snipers can be rushed, campers can be flushed — but a Soldier Type who's equally comfortable at 10 meters or 800 never gives the enemy a weakness to attack. It's the role the pros quietly main, and it's exactly how newcomers grow into veterans."], "insights": [["⚖️", "<b>You have no bad matchups.</b> Any gun, any range, any circle — you adapt faster than the lobby can punish you."], ["⚓", "<b>You're the squad's safety net.</b> When everyone else's plan falls apart, yours still works."], ["📈", "<b>You improve every single match.</b> Balanced players don't plateau — they compound."]], "ctaLine": "this is your primary platform — a well-rounded all-rounder", "recs": [["hk416d_cgs", "The M416 — the most balanced rifle in PUBG and the perfect match for your Soldier Type profile. Umarex's HK416D gas blowback: fast, flat, and never out of place."], ["scarl_cyma", "The SCAR-L — your backup role in rifle form. Tan, metal, tank-built: balanced like you, and twice as reliable."]]}, "stealth": {"name": "STEALTH SPECIALIST", "sub": "Unseen. Unheard. Ambush Perfected.", "traits": [["Stealth", 96], ["Patience", 92], ["Timing", 90]], "analysis": ["Your answers read like a field manual chapter nobody else studied: <b>you don't take fights — you set them.</b> Riding the zone edge, letting two squads bleed each other dry, then walking through the smoke to collect: that's not camping, that's ambush economics. While the lobby celebrates loud plays, you're quietly building the scoreboard nobody notices until it's over.", "Stealth Specialists like you understand something fundamental about Battlegrounds: <b>the player who fires second but sees first, wins.</b> You move on the shadow side of the map, you think in sightline blind spots, and your traps are set before your enemies even decide to push. When a full squad vanishes between zone two and zone three, somebody like you was there."], "insights": [["🤫", "<b>You win before the first shot.</b> Positioning and timing do your damage for you."], ["🕸️", "<b>You set traps, not ambushes — there's a difference.</b> Your enemies walk into fights you scheduled hours earlier."], ["🕵️", "<b>The kill feed is your alibi.</b> Nobody ever saw you coming. That's the point."]], "ctaLine": "this is your primary platform — a suppressed, field-quiet replica", "recs": [["mp5sd3", "The MP5SD — the gun with silence built into the barrel. VFC's gas blowback version is the closest thing to sneaking around Erangel with the sound off."], ["mp7_vfc", "The MP7 — compact, fast, and quiet enough to disappear after the ambush. Your second tool for the shadow side of the map."]]}, "heavy": {"name": "HEAVY HITTER", "sub": "Enhanced Combat. Direct Confrontation. Decisive.", "traits": [["Combat Power", 97], ["Durability", 93], ["Presence", 91]], "analysis": ["Your answers didn't hesitate: <b>you are the direct confrontation.</b> Where other players ask 'should we fight?', you're already asking 'from which angle?'. Enhanced combat ability isn't a stat line for you — it's a playstyle. You shine in the exact moments that break other players: stacked odds, open ground, a firefight with no cover and no exit plan. That's your home turf.", "Heavy Hitters change the math of every encounter they walk into. <b>Squads don't plan around your aim — they plan around your existence.</b> When you fortify a compound, it stops being on the map. When you push a treeline, the treeline stops shooting back. Direct confrontation is a language, and you're fluent in it."], "insights": [["💥", "<b>Direct fights are your natural habitat.</b> The more bodies in the room, the better you perform."], ["🛡️", "<b>You absorb pressure that breaks other players.</b> Sustained fights don't wear you down — they warm you up."], ["🔨", "<b>Presence is a weapon.</b> Half your kills surrender mentally before you fire a round."]], "ctaLine": "this is your primary platform — a heavy, full-auto powerhouse", "recs": [["m249_para", "The M249 — PUBG's final-circle king. The PARA variant, exactly the crate-drop legend you've mounted a thousand times. Suppression is a love language."], ["scar_h_tan", "The SCAR-H — the heavy hitter's rifle. Tan, metal, and built to end arguments at mid-range before they start."]]}, "fixer": {"name": "THE FIXER", "sub": "Gear Mended Faster Than a Cheetah in a Marathon.", "traits": [["Repair Speed", 96], ["Team Support", 94], ["Efficiency", 90]], "analysis": ["Your answers reveal the role that separates squads that survive from squads that almost survive: <b>The Fixer.</b> Helmets patched, vests topped up, boosters timed, gear redistributed — while your teammates treat equipment as 'fine for now', you keep the entire squad's kit optimal longer. That's not a side job. In a game where a cracked Lv2 helmet decides a 1v1, you're carrying the team's real HP bar.", "Here's what your squad already knows and your enemies never learn: <b>teams with a Fixer don't lose to attrition.</b> Every fight you take, you take at full gear. Every rotation you make, you make with a plan and a repair kit. It's the least glamorous role on the roster and the reason your squad's highlight reel exists at all."], "insights": [["🔧", "<b>Your gear is always optimal.</b> While others loot replacements, you never seem to need one."], ["🤝", "<b>You multiply your squad's firepower.</b> Repairs don't show on the kill feed — they show on the scoreboard."], ["⏱️", "<b>You fix faster than the fight comes back.</b> Mend, redistribute, reload — the cycle never breaks."]], "ctaLine": "this is your primary platform — a reliable support workhorse", "recs": [["ump9_dx", "The UMP9 DX — the Fixer's workhorse. Compact, controllable, and always ready: exactly the kind of gun you never have to think about, because it just works."], ["hk416a5_tan", "The HK416A5 — the standard everyone else's gear is measured against. Tan AEG, low maintenance, endlessly dependable. Fix it once, forget it."]]}, "brawler": {"name": "THE BRAWLER", "sub": "Close-Quarters Force. Faster Regen. Scale Tipper.", "traits": [["Raw Strength", 97], ["Close-Quarters", 94], ["Regeneration", 91]], "analysis": ["Your answers scream it in the first option you pick: <b>you are a close-quarters force of nature.</b> Pochinki on the drop, a P1911 over a parachute, a compound cleared before your teammates finish landing — The Brawler isn't a role you chose, it's the one that was always going to find you. Coupled with the health regeneration to outlast trades, you don't win 50/50 fights. You win 30/70s.", "Here's why squads fear pushing you: <b>every second a Brawler stays alive in a building, the fight tips further their way.</b> Your regen means trades that would kill other players only reset the clock. Your strength means room-to-room combat is your natural range. When the scales are even, you're already winning — and when they're not, you tip them."], "insights": [["🥊", "<b>Close quarters is your home range.</b> Stairwells, compounds, final-circle grass — all yours."], ["❤️", "<b>You outlast trades that should end you.</b> Regeneration turns your mistakes into second chances."], ["⚖️", "<b>You tip the scales in your team's favor.</b> The fight changes shape the moment you enter it."]], "ctaLine": "this is your primary platform — a close-quarters bullet hose", "recs": [["krytac_vector", "The Vector — the fastest trigger in the game, built for exactly the rooms you fight in. KRYTAC's AEG spits rounds almost as fast as your Pochinki fights end."], ["cyma_akm", "The AKM — found in every compound, feared in every lobby. Full wood and steel, built like the one you wish spawned first."]]}, "scout": {"name": "THE SCOUT", "sub": "Information Is Power. You're the Ultimate Weapon.", "traits": [["Awareness", 97], ["Hearing", 93], ["Map IQ", 91]], "analysis": ["Your answers describe the player every squad wishes they had and every squad under-appreciates until it's too late: <b>The Scout.</b> Enhanced hearing, total awareness, a mental map that updates in real time — you don't react to information, you collect it before it matters. The flank you called ninety seconds early, the footsteps your teammates swore weren't there, the trap that caught a full squad because you knew exactly which road they'd take: that's your signature.", "If information is power, <b>you're the ultimate weapon.</b> Scouts like you win matches without topping the kill feed — the rotations you predict, the ambushes you pre-empt, the traps you set for unsuspecting foes do the killing for you. Your squad doesn't just follow your calls. They trust their lives to your ears. And they should."], "insights": [["👂", "<b>You hear the game before you see it.</b> Footsteps, vehicles, distant fights — all of it is intel, and all of it is yours."], ["🗺️", "<b>You think one rotation ahead.</b> The circle hasn't moved yet, but you're already where it's going."], ["🎯", "<b>Your traps catch players who thought they were the hunters.</b> Information, weaponized."]], "ctaLine": "this is your primary platform — a precision bolt-action trainer", "recs": [["gg_g980_se", "The Kar98k — the most iconic rifle in PUBG and the natural tool of every Scout: one round, one call, one confirmation your read was right. G&G's G980 SE is its living replica."], ["tm_m40a5_fde", "The M40A5 in flat dark earth — Tokyo Marui's bolt-action with a ghillie-ready frame. For the Scout who wants their intel delivered at 800 meters."]]}}, "terminal": ["> UPLOADING SURVIVOR RESPONSE PROFILE ...... OK", "> CROSS-REFERENCING 2.7M BATTLEGROUNDS SQUADS .", "> MEASURING LOOT EFFICIENCY DELTA ........ OK", "> CALCULATING CIRCLE PATIENCE INDEX ....... OK", "> CALIBRATING DROP ROLE .................."], "game_read": "<div class='gc-title'>// PUBG — Your Read</div><p>In PUBG, most players die to their own nerves in the final circle. <b>You don't.</b> Your profile matches the players who win blue-zone endgames: rotational foresight, patience economy, and cold execution when twenty survivors become one winner. That chicken dinner energy is genuinely you.</p>", "cta_lead": "Every survivor starts with their primary. Based on your assessment, <b>{ctaLine}</b> — the physical counterpart to your role. Practice with the replica first. Master it. Then watch what happens to your dinners.", "game_name": "PUBG: BATTLEGROUNDS"};
+const EMOJI = {"age_kid": "🧒", "age_teen": "🧑", "age_adult": "👤", "age_vet": "🎖️", "breach_charge": "💥", "knock_door": "🚪", "door_mirror": "🔦", "flank": "🔀", "chevrons": "🎖️", "door_burst": "🔨", "scope": "🎯", "shield": "🛡️", "crosshair_shot": "🎯", "flashbang": "⚡", "gas_cloud": "💨", "reposition": "🔀", "rifle_scope": "🔭", "rifle_charge": "💣", "rifle_comms": "📻", "shield_bolt": "🛡️", "crown": "👑", "door_arrow": "🚪", "mask": "😈", "heart_shield": "❤️", "eye_hold": "👁️", "door_push": "🚪", "squad": "👥", "lockdown": "🔒", "target_shot": "🎯", "smoke_push": "💨", "regroup": "🔁", "tracers": "💫", "glass_shot": "🎯", "full_breach": "💥", "clock_arrow": "⏱️", "shield_advance": "🛡️", "hotdrop": "⬇️", "containers": "📦", "map_pin_star": "📍", "plane": "✈️", "pistol": "🔫", "helmet": "⛑️", "sniper_rifle": "🔭", "vehicle": "🚙", "rotate_center": "🔄", "edge_ride": "🛣️", "third_party": "🦅", "fortify": "🛡️", "ghillie": "🌿", "rifle_redot": "🔴", "rifle_full": "🔫", "m249": "🔥", "headset": "🎧", "grenade": "💣", "anchor": "⚓", "hill_flag": "🚩", "muzzle_flash": "💥", "prone_shot": "🎯", "grenade_pin": "📌", "hook_bait": "🎣", "full_auto": "🔥", "headshot": "💀", "skull": "💀", "house_shield": "🏠", "squad_wipe": "☠️", "bomb_timer": "⏰", "flag_capture": "🚩", "team_push": "🚀", "shuriken": "🗡️", "uav_radar": "📡", "airstrike": "🛩️", "helicopter": "🚁", "cluster": "💥", "quickscope": "🎯", "smg_speed": "🏃", "ar_trophy": "🏆", "lmg_thermal": "🔥", "strat_board": "📋", "angles": "📐", "rush": "🏃", "clock_spawn": "⏱️", "tempo": "🥁", "call_rotate": "🔄", "gate_lock": "🔒", "map_shot": "🗺️", "hardpoint": "📍", "killfeed": "☠️", "overtime_hold": "⏳", "easy_life": "🤙", "smart_moves": "🧠", "double_down": "🎲", "forum_sleuth": "🕵️", "studio_session": "🎧", "club_moment": "📱", "marina_night": "⛵", "vip_booth": "🥂", "legit_empire": "🏢", "music_hustle": "🎤", "golden_routes": "🚤", "last_scores": "💼", "cool_head": "❄️", "hold_attention": "🚪", "scanner_call": "📻", "never_here": "⚓", "trusty_sidearm": "🔫", "classic_1911": "🎖️", "chrome_statement": "✨", "wrapped_hands": "🥊", "caption_it": "🤳", "scrub_it": "🎬", "comms_worry": "📡", "get_off_my_lawn": "👴", "stakes_up": "📈", "family_first": "👪", "brand_care": "💅", "knows_too_much": "🤯", "smile_own": "😎", "they_talk": "🗣️", "golden_age": "🌅", "adapt_hustle": "🔄"};
+
+let scores = {};
+function resetScores(){ scores = {}; Object.keys(CONFIG.archetypes).forEach(k=>scores[k]=0); }
+resetScores();
+let ageFlag = {under13:false,minor:false};
+let qIndex = 0;
+const TOTAL = CONFIG.questions.length + 1; /* + age gate */
+
+/* build question screens at runtime */
+(function buildScreens(){
+  const host = document.getElementById("question-screens");
+  /* age gate first */
+  const ageQ = {
+    id:"s-age", kicker:"// Question 01",
+    title:'How old are <span class="accent">you?</span>',
+    sub:"First things first, survivor. Every drop zone runs an age check before the plane even leaves.",
+    opts:[
+      ["Under 13",{under13:true},"age_kid"],
+      ["13 – 17",{minor:true},"age_teen"],
+      ["18 – 24",{},"age_adult"],
+      ["25 +",{},"age_vet"]
+    ]
+  };
+  host.appendChild(makeScreen(ageQ, 0, true));
+  CONFIG.questions.forEach((q,i)=> host.appendChild(makeScreen(q, i+1, false)));
+})();
+
+function makeScreen(q, idx, isAge){
+  const s = document.createElement("section");
+  s.className = "screen"; s.id = "s-q"+idx;
+  const wrap = document.createElement("div");
+  wrap.className = "wrap q-wrap";
+  const kick = document.createElement("div");
+  kick.className = "kicker";
+  kick.textContent = "// Question " + String(idx+1).padStart(2,"0");
+  const h = document.createElement("h2");
+  h.className = "q-title";
+  h.innerHTML = q.title;
+  const sub = document.createElement("p");
+  sub.className = "q-sub";
+  sub.innerHTML = q.sub;
+  const opts = document.createElement("div");
+  opts.className = "opts";
+  q.opts.forEach((o,i)=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "opt";
+    const ic = document.createElement("span");
+    ic.className = "ic";
+    ic.textContent = EMOJI[isAge ? o[2] : (q.icons ? q.icons[i] : "")] || "";
+    const txt = document.createElement("span");
+    txt.className = "txt";
+    txt.innerHTML = o[0];
+    btn.appendChild(ic); btn.appendChild(txt);
+    const weight = isAge ? o[1] : o[2];
+    btn.addEventListener("click", function(){ answer(idx, isAge, weight, btn); });
+    opts.appendChild(btn);
+  });
+  wrap.appendChild(kick); wrap.appendChild(h); wrap.appendChild(sub); wrap.appendChild(opts);
+  s.appendChild(wrap);
+  return s;
+}
+
+function go(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+function setProgress(n){
+  const pct = Math.min(100, Math.round(n/TOTAL*100));
+  document.getElementById("progress-bar").style.width = pct + "%";
+  document.getElementById("progress-label").textContent = n>0 ? n + " / " + TOTAL : "";
+}
+function startQuiz(){
+  resetScores();
+  ageFlag = {under13:false,minor:false};
+  qIndex = 0; setProgress(0); nextQ();
+}
+function nextQ(){
+  if(qIndex < TOTAL){ go("s-q"+qIndex); setProgress(qIndex+1); }
+  else { go("s-analyzing"); setProgress(TOTAL); runAnalyzing(); }
+}
+let advancing = false;
+function answer(idx, isAge, w, btn){
+  if(advancing) return;
+  advancing = true;
+  if(btn) btn.classList.add("picked");
+  document.querySelectorAll("#s-q"+idx+" .opt").forEach(b=>{ if(b !== btn) b.classList.add("faded"); });
+  if(isAge){ ageFlag.under13 = !!w.under13; ageFlag.minor = !!w.minor; }
+  else { Object.keys(w).forEach(k=>{ if(k in scores) scores[k]+=w[k]; }); }
+  qIndex++;
+  setTimeout(()=>{ advancing = false; nextQ(); }, 300);
+}
+
+/* analyzing terminal */
+function runAnalyzing(){
+  const term = document.getElementById("term");
+  const btn = document.getElementById("reveal-btn");
+  term.innerHTML = ""; btn.style.display = "none";
+  let i = 0;
+  const LINES = CONFIG.terminal;
+  (function step(){
+    if(i < LINES.length){
+      const div = document.createElement("div");
+      div.className = "line active";
+      div.innerHTML = LINES[i] + ' <span class="cursor"></span>';
+      term.appendChild(div);
+      setTimeout(()=>{
+        div.classList.remove("active"); div.classList.add("done");
+        div.innerHTML = '<span class="tick">[OK]</span> ' + LINES[i].replace("> ","");
+        i++; step();
+      }, 620 + Math.random()*380);
+    } else {
+      const done = document.createElement("div");
+      done.className = "line active";
+      done.innerHTML = '<span class="tick">[>>]</span> ROLE LOCKED';
+      term.appendChild(done);
+      btn.style.display = "block";
+    }
+  })();
+}
+
+function getWinner(){
+  const keys = Object.keys(scores);
+  let winner = keys[0], best = -1;
+  keys.forEach(k=>{ if(scores[k]>best){best=scores[k];winner=k;} });
+  return winner;
+}
+
+function showResult(){
+  const A = CONFIG.archetypes[getWinner()];
+  document.getElementById("r-badge").textContent = "// Role Confirmed — " + A.name;
+  document.getElementById("r-name").textContent = A.name;
+  document.getElementById("r-sub").textContent = A.sub;
+  document.getElementById("r-match").textContent = A.traits[0][1] + "%";
+  const rChar = document.getElementById("r-char");
+  if(A.img){ document.getElementById("r-char-img").src = A.img; rChar.style.display = "block"; }
+  else { rChar.style.display = "none"; }
+  const bars = document.getElementById("r-bars");
+  bars.innerHTML = "";
+  A.traits.forEach((t,i)=>{
+    const row = document.createElement("div");
+    row.className = "bar-row" + (i>0 ? " dim" : "");
+    row.innerHTML = '<div class="bar-top"><span>'+t[0]+'</span><span>'+t[1]+'%</span></div><div class="bar-track"><div class="bar-fill" data-w="'+t[1]+'"></div></div>';
+    bars.appendChild(row);
+  });
+  document.getElementById("r-analysis").innerHTML = A.analysis.map(p=>'<p class="analysis-p">'+p+'</p>').join("");
+  document.getElementById("r-insights").innerHTML = A.insights.map(it=>'<div class="insight"><div class="ic">'+it[0]+'</div><p>'+it[1]+'</p></div>').join("");
+  document.getElementById("r-game").innerHTML = CONFIG.game_read;
+  go("s-result");
+  setTimeout(()=>{ document.querySelectorAll(".bar-fill").forEach(b=>{ b.style.width = b.dataset.w + "%"; }); }, 150);
+}
+
+/* retry an image if the server hiccups (502/timeout), then hide it if it truly fails */
+function imgRetry(el){
+  if(!el) return;
+  if(el.naturalWidth > 0) return;
+  var t = parseInt(el.getAttribute("data-rt") || "0", 10);
+  if(t < 3){
+    el.setAttribute("data-rt", String(t + 1));
+    setTimeout(function(){
+      var base = (el.getAttribute("src") || "").split("?")[0];
+      el.src = base + "?r=" + (t + 1);
+    }, 250 * (t + 1));
+  } else if(el.parentNode){ el.parentNode.style.display = "none"; }
+}
+
+
+var PISTOL_KEYS={tm_strike_warrior:1,tm_deagle_chrome:1,g19_gen5:1,fiveseven_tan:1};function noGBB(t,k){ var w=PISTOL_KEYS[k]?"airsoft pistol":"airsoft rifle"; return (t||"").replace(/GBBR?/gi,w); }
+function recCard(r){
+  if(!r[0]){
+    const c = document.createElement("div");
+    c.className = "rec-card plain"; c.style.cursor = "default";
+    c.innerHTML =
+      '<div class="rc-top"><span class="rc-name">'+(r[2]||"Field Note")+'</span></div>'+
+      '<p>'+r[1]+'</p>';
+    return c;
+  }
+  const P = PRODUCTS[r[0]];
+  const c = document.createElement("a");
+  c.className = "rec-card"; c.href = P.url; c.target = "_blank"; c.rel = "noopener";
+  c.setAttribute("data-key", r[0]);
+  c.setAttribute("data-name", P.name);
+  c.setAttribute("data-price", P.price);
+  c.innerHTML =
+    '<div class="rc-media"><img src="'+P.img+'" alt="'+P.name+'" decoding="async" onerror="imgRetry(this)"></div>'+
+    '<div class="rc-body">'+
+      '<span class="rc-name">'+noGBB(P.name,r[0])+'</span>'+
+      '<div class="rc-ingame">'+noGBB(P.ingame,r[0])+'</div>'+
+      '<p>'+noGBB(r[1],r[0])+'</p>'+
+      '<div class="rc-foot"><span class="rc-btn">Deploy</span></div>'+
+    '</div>';
+  return c;
+}
+
+function buildCTA(){
+  const A = CONFIG.archetypes[getWinner()];
+  document.getElementById("cta-role").textContent = A.name;
+  document.getElementById("cta-lead").innerHTML = CONFIG.cta_lead.replace("{ctaLine}", "<b>"+A.ctaLine+"</b>");
+  const cards = document.getElementById("cta-cards");
+  cards.innerHTML = "";
+  if(ageFlag.under13){
+    cards.innerHTML =
+      '<div class="rec-card plain" style="cursor:default;">'+
+      '<div class="rc-top"><span class="rc-name" style="color:var(--amber)">Mission Briefing: Future Operator</span></div>'+
+      '<p>You\'ve got the instincts — that\'s the hard part. But airsoft replicas have a minimum age requirement, and the pros all started the same way: <b style="color:var(--text)">grab a parent or guardian and get them involved.</b> Show them this result, take them to a local airsoft field, and let them see what your Operator DNA looks like off-screen. Your first deployment is a family op.</p></div>';
+  } else {
+    A.recs.forEach(r=>cards.appendChild(recCard(r)));
+    if(ageFlag.minor){
+      const n = document.createElement("div");
+      n.className = "rec-card plain"; n.style.cursor = "default";
+      n.innerHTML = '<div class="rc-top"><span class="rc-name" style="color:var(--amber);font-size:16px;">Under 18? Read This First</span></div><p>You\'re cleared to dream, but purchasing requires an adult. <b style="color:var(--text)">Bring a parent or guardian in on this</b> — they handle the order, you handle the training arc. That\'s the deal.</p>';
+      cards.appendChild(n);
+    }
+  }
+}
+
+function restart(){ qIndex=0; resetScores(); ageFlag={under13:false,minor:false}; setProgress(0); document.querySelectorAll(".opt").forEach(b=>b.classList.remove("picked","faded")); go("s-hook"); }
+
+const _go = go;
+go = function(id){ if(id==="s-cta") buildCTA(); _go(id); };
+
+/* lazy-fade the game art once it actually loads */
+(function(){
+  const bg = document.getElementById("bg");
+  const img = new Image();
+  img.onload = ()=> bg.classList.add("loaded");
+  img.src = "assets/img/pubg_hero.webp";
+})();
+</script>
+
+<!-- ============ ANALYTICS (admin console) ============ -->
+<script async src="https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=TXaXYk"></script>
+<script>window.AZ_CONFIG = {"endpoint": "", "token": "CHANGE-ME-LONG-RANDOM", "game": "PUBG: BATTLEGROUNDS", "enabled": false};</script>
+<script src="admin/analytics.js"></script>
+<script>
+/* performance: warm images so result & gun screens pop instantly */
+(function(){
+  /* preload all result portraits as soon as the quiz starts */
+  const _startQuiz = window.startQuiz;
+  if(_startQuiz){
+    window.startQuiz = function(){
+      try{
+        Object.keys(CONFIG.archetypes||{}).forEach(function(k){
+          const im = CONFIG.archetypes[k].img;
+          if(im){ const x = new Image(); x.decoding = "async"; x.src = im; }
+        });
+      }catch(e){}
+      return _startQuiz.apply(this, arguments);
+    };
+  }
+  /* once the result is known, warm that winner's recommended gun images */
+  const _showResult2 = window.showResult;
+  if(_showResult2){
+    window.showResult = function(){
+      const ret = _showResult2.apply(this, arguments);
+      try{
+        const A = CONFIG.archetypes[getWinner()];
+        (A.recs||[]).forEach(function(r){
+          if(r && r[0] && PRODUCTS[r[0]] && PRODUCTS[r[0]].img){
+            const x = new Image(); x.decoding = "async"; x.src = PRODUCTS[r[0]].img;
+          }
+        });
+        /* warm the "Real life is not a game" transition before it's reached */
+        const pv = new Image(); pv.decoding = "async";
+        pv.src = "assets/img/transition-real-life.webp";
+      }catch(e){}
+      return ret;
+    };
+  }
+})();
+</script>
+<script>
+/* hooks: answers, result, cta, gun-link clicks, email capture */
+(function(){
+  if(!window.AZ) return;
+
+  /* answer log */
+  const _answer = window.answer;
+  if(_answer){
+    window.answer = function(idx, isAge, w, btn){
+      let txt = "";
+      if(btn){ const t = btn.querySelector(".txt"); txt = t ? t.textContent : btn.textContent; }
+      if(isAge){ try{ AZ.age(txt); }catch(e){} }
+      else { try{ AZ.answer(idx, txt, w||{}); }catch(e){} }
+      return _answer.apply(this, arguments);
+    };
+  }
+
+  /* result log */
+  const _showResult = window.showResult;
+  if(_showResult){
+    window.showResult = function(){
+      const ret = _showResult.apply(this, arguments);
+      try{
+        const A = CONFIG.archetypes[getWinner()];
+        const guns = (A.recs||[]).map(function(r){
+          return r && r[0] ? (PRODUCTS[r[0]] ? PRODUCTS[r[0]].name : r[0]) : null;
+        }).filter(Boolean);
+        AZ.result(A.name, guns);
+        if(ageFlag.under13) AZ._finished();
+      }catch(e){}
+      return ret;
+    };
+  }
+
+  /* cta view + email box visibility */
+  const _go = window.go;
+  if(_go){
+    window.go = function(id){
+      if(id === "s-cta"){
+        try{ AZ.viewCta(); }catch(e){}
+        const eb = document.getElementById("email-box");
+        if(eb){ const u13 = (typeof ageFlag !== "undefined") ? ageFlag.under13 : false; eb.style.display = u13 ? "none" : ""; }
+      }
+      return _go.apply(this, arguments);
+    };
+  }
+
+  /* gun link clicks (delegated) */
+  document.addEventListener("click", function(ev){
+    const a = ev.target.closest ? ev.target.closest("a.rec-card[data-key]") : null;
+    if(!a) return;
+    try{
+      AZ.link(a.getAttribute("data-key"), a.getAttribute("data-name"),
+        a.getAttribute("data-price"), a.href);
+    }catch(e){}
+  });
+
+  /* email capture -> logged to the sheet AND triggers the backend auto-reply */
+  const form = document.getElementById("email-form");
+  if(form){
+    form.addEventListener("submit", function(ev){
+      ev.preventDefault();
+      const inp = document.getElementById("email-in");
+      const v = (inp.value||"").trim();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){ inp.focus(); return; }
+      const btn = document.getElementById("email-btn");
+      if(btn){ btn.disabled = true; btn.textContent = "Sending…"; }
+      try{
+        const A = CONFIG.archetypes[getWinner()];
+        const guns = (A.recs||[]).map(function(r){
+          const P = (r && r[0]) ? PRODUCTS[r[0]] : null;
+          if(!P){
+            return { name: (r && (r[2] || r[0])) || "Field Note", blurb: (r && r[1]) || "" };
+          }
+          return { key: r[0], name: P.name, ingame: P.ingame, price: P.price,
+                   url: P.url, img: P.img, blurb: r[1] || "" };
+        });
+        (function(){
+          function _send(email){
+            if (window.klaviyo && typeof window.klaviyo.subscribe === "function") {
+              window.klaviyo.subscribe(email, (function(){
+                var P=(typeof PRODUCTS!=="undefined"?PRODUCTS:{}), A_=A||{}, ABS="https://combatassessment.com/";
+                var strip=function(s){return String(s==null?"":s).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();};
+                var img=function(p){p=p||"";if(!p)return "";return /^https?:/i.test(p)?p:ABS+String(p).replace(/^\/+/,"");};
+                var PK={tm_strike_warrior:1,tm_deagle_chrome:1,g19_gen5:1,fiveseven_tan:1};
+                var noGBB=function(t,k){var w=PK[k]?"airsoft pistol":"airsoft rifle";return String(t==null?"":t).replace(/GBBR?/gi,w);};
+                var cut=function(s,n){s=String(s==null?"":s);if(s.length<=n)return s;var t=s.slice(0,n);var i=t.lastIndexOf(" ");if(i>n*0.55)t=t.slice(0,i);return t.replace(/[\s,;:.\-]+$/,"")+"\u2026";};
+                var BG={"PUBG: BATTLEGROUNDS":"assets/img/pubg-hero.webp","Ready or Not":"assets/img/ron-hero.webp","Call of Duty":"assets/img/cod-hero.webp","GTA VI":"assets/img/hero.webp"};
+                var TH={"PUBG: BATTLEGROUNDS":["#f2a900","#ffd166"],"Ready or Not":["#4d9fff","#8dc2ff"],"Call of Duty":["#ff7a00","#ffb066"],"GTA VI":["#ff2d78","#ff7fb0"]};
+                var gname=CONFIG.game_name||"", th=TH[gname]||["#e01a2b","#ff6b76"];
+                var tr=A_.traits||[], an=A_.analysis||[], ins=A_.insights||[], rc=A_.recs||[];
+                var o={ $list_id:"TaizN7", $source:"Combat Assessment",
+                  game: gname, character: strip(A_.name), character_sub: strip(A_.sub),
+                  character_img: img(A_.img), game_bg: img(BG[gname]||""),
+                  theme_accent: th[0], theme_accent_2: th[1],
+                  analysis1: strip(an[0]), analysis2: strip(an[1]),
+                  cta_lead: strip(String(CONFIG.cta_lead||"").replace("{ctaLine}", A_.ctaLine||"")),
+                  traits: tr.map(function(t){return t[0]+" "+t[1]+"%";}).join(", ") };
+                for(var i=0;i<4;i++){ var t=tr[i]; o["trait"+(i+1)+"_name"]=t?strip(t[0]):""; o["trait"+(i+1)+"_pct"]=t?String(t[1]):""; }
+                for(var k=0;k<3;k++){ var z=ins[k]||[]; o["insight"+(k+1)+"_emoji"]=z[0]?strip(z[0]):""; o["insight"+(k+1)]=z[1]?strip(z[1]):""; }
+                for(var g=0;g<2;g++){ var r=rc[g]||[], key=r[0], pr=(key&&P[key])||null;
+                  o["gun"+(g+1)+"_name"]=pr?noGBB(pr.name,key):strip(r[2]||key||"");
+                  o["gun"+(g+1)+"_ingame"]=pr?noGBB(pr.ingame,key):"";
+                  o["gun"+(g+1)+"_url"]=pr?pr.url:"";
+                  o["gun"+(g+1)+"_img"]=pr?img(pr.img):"";
+                  o["gun"+(g+1)+"_price"]=(pr&&pr.price!=null)?"$"+pr.price:"";
+                  o["gun"+(g+1)+"_blurb"]=cut(pr?noGBB(strip(r[1]),key):strip(r[1]),150); }
+                return o;
+              })());
+              return true;
+            }
+            return false;
+          }
+          if (!_send(v)) {
+            var _n = 0, _iv = setInterval(function(){
+              if (_send(v) || (++_n > 20)) clearInterval(_iv);
+            }, 500);
+          }
+        })();
+      }catch(e){}
+      form.style.display = "none";
+      const okBox = document.getElementById("email-ok");
+      if(okBox) okBox.style.display = "block";
+    });
+  }
+})();
+</script>
+</body>
+</html>

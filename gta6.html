@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTA VI — What's Your Combat Role?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0b0d; --panel:rgba(16,18,22,.82); --panel2:rgba(22,25,31,.9);
+  --line:#2a2f38; --accent:#ff2d78; --accent-dim:#7a1c44;
+  --text:#e8eaed; --muted:#8b929c; --amber:#f0a020; --green:#3ddc84;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+/* ==== GAME ART BACKGROUND ==== */
+#bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("assets/img/hero.webp");
+  background-size:cover;background-position:center top;
+  opacity:0;transition:opacity 1.2s ease;
+}
+#bg.loaded{opacity:1;}
+#bg-shade{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(80,20,60,.55) 0%, rgba(10,11,13,.72) 55%, rgba(10,11,13,.92) 100%),
+    radial-gradient(ellipse 90% 60% at 50% 0%, transparent 0%, rgba(10,11,13,.50) 100%);
+}
+#bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,45,120,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,45,120,.05) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;}
+#progress-wrap{position:fixed;top:0;left:0;right:0;height:3px;background:#171a20;z-index:50;}
+#progress-bar{height:100%;width:0;background:var(--accent);transition:width .45s cubic-bezier(.7,0,.3,1);box-shadow:0 0 12px var(--accent);}
+#progress-label{position:fixed;top:10px;right:14px;font-family:'Saira Condensed';font-weight:600;font-size:13px;letter-spacing:2px;color:var(--muted);z-index:50;}
+.screen{display:none;flex:1;flex-direction:column;justify-content:flex-start;align-items:center;padding:64px 16px 52px;min-height:100vh;width:100%;}
+.screen.active{display:flex;animation:fadeUp .5s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.wrap{width:100%;max-width:680px;}
+.q-wrap{max-width:460px;margin:0 auto;text-align:center;}
+/* top-anchored hook (content starts near the top of the page) */
+body.panel-all #s-hook .wrap{text-shadow:0 2px 18px rgba(0,0,0,.9),0 1px 5px rgba(0,0,0,.85);}
+body.hook-center #s-hook .wrap{text-shadow:0 2px 18px rgba(0,0,0,.9),0 1px 5px rgba(0,0,0,.85);}
+.hook-card{width:190px;height:190px;border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:0 18px 50px rgba(0,0,0,.55);margin-bottom:22px;flex:0 0 auto;}
+.hook-card img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block;}
+body.hook-center #s-hook .wrap{text-shadow:0 2px 18px rgba(0,0,0,.9),0 1px 5px rgba(0,0,0,.85);}
+.kicker{font-family:'Inter',sans-serif;font-weight:600;font-size:11.5px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:8px;}
+h1{font-family:'Saira Condensed';font-weight:700;font-size:clamp(30px,6vw,50px);line-height:1;text-transform:uppercase;letter-spacing:.5px;}
+h2.q-title{font-family:'Saira Condensed';font-weight:700;font-size:clamp(22px,4.6vw,28px);line-height:1.15;margin-bottom:4px;text-transform:none;}
+.q-wrap h2.q-title,.q-wrap .q-sub,.q-wrap .kicker{text-shadow:0 2px 14px rgba(0,0,0,.95),0 1px 4px rgba(0,0,0,.9);}
+.q-sub{color:var(--muted);font-size:13.5px;font-weight:600;margin-bottom:18px;line-height:1.45;}
+.accent{color:var(--accent);}
+.lead{color:var(--muted);font-size:14.5px;line-height:1.6;margin-top:14px;max-width:560px;}
+.lead b{color:var(--text);}
+.game-tag{font-family:'Saira Condensed';font-weight:700;font-size:15px;letter-spacing:2px;border:1px solid var(--accent-dim);padding:7px 14px;color:var(--accent);background:var(--panel);text-transform:uppercase;display:inline-block;border-radius:999px;}
+.btn{display:inline-block;font-family:'Saira Condensed';font-weight:700;font-size:15px;letter-spacing:1.6px;text-transform:uppercase;text-decoration:none;text-align:center;background:var(--accent);color:#0a0b0d;border:none;border-radius:10px;padding:13px 28px;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(255,45,120,.45);}
+.btn.ghosted{background:transparent;border:1px solid var(--line);color:var(--muted);}
+.btn.ghosted:hover{border-color:var(--accent);color:var(--text);box-shadow:none;}
+.opts{display:flex;flex-direction:column;align-items:center;gap:9px;width:100%;}
+.opt{position:relative;display:flex;align-items:center;justify-content:center;gap:12px;width:min(340px,100%);min-height:48px;text-align:center;background:#fff;border:2px solid #fff;border-radius:12px;padding:11px 22px;cursor:pointer;color:#111;font-size:15.5px;font-weight:700;font-family:'Inter',sans-serif;transition:border-color .18s ease,background .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease,opacity .25s ease;}
+.opt:hover{border-color:var(--accent);background:var(--accent);color:#fff;transform:translateY(-1px);box-shadow:0 6px 18px rgba(255,45,120,.45);}
+.opt:active{transform:scale(.985);}
+.opt .ic{position:absolute;left:18px;top:50%;transform:translateY(-50%);flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:26px;font-size:22px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif;}
+.opt .txt{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;margin:0 22px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.opt.faded{opacity:.35;pointer-events:none;}
+.opt.picked{border-color:var(--accent);background:var(--accent);color:#fff;box-shadow:0 0 0 1px var(--accent),0 0 26px rgba(255,45,120,.45);}
+@media(max-width:520px){.opt{width:min(300px,100%);min-height:42px;gap:10px;padding:9px 16px;font-size:14.5px;}.opt .ic{left:14px;width:22px;font-size:19px;}.opt .txt{margin:0 18px;}}
+.hint{margin-top:28px;color:var(--muted);font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+.hint::before{content:"";width:7px;height:7px;background:var(--accent);display:inline-block;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+.analyzing-box{width:100%;max-width:560px;text-align:left;}
+.term{background:rgba(12,14,17,.88);border:1px solid var(--line);padding:22px 24px;font-family:'Saira Condensed';font-size:17px;letter-spacing:1px;min-height:180px;border-radius:14px;}
+.term .line{color:var(--muted);padding:3px 0;display:flex;align-items:center;gap:10px;}
+.term .line.done{color:var(--green);}
+.term .line.active{color:var(--text);}
+.term .cursor{display:inline-block;width:9px;height:17px;background:var(--accent);animation:blink 1s infinite;vertical-align:middle;}
+.term .tick{color:var(--green);font-weight:700;}
+.analyzing-head{font-family:'Saira Condensed';font-weight:800;font-size:clamp(28px,6vw,44px);text-transform:uppercase;margin-bottom:18px;text-align:center;}
+.analyzing-head .accent{display:block;font-size:.45em;letter-spacing:4px;font-weight:700;}
+.result-badge{display:inline-block;font-family:'Saira Condensed';font-weight:700;font-size:13px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent-dim);padding:6px 14px;margin-bottom:14px;background:var(--panel);border-radius:999px;}
+.archetype{font-family:'Saira Condensed';font-weight:900;font-size:clamp(52px,11vw,100px);line-height:.92;text-transform:uppercase;text-shadow:0 4px 40px rgba(0,0,0,.8);}
+.archetype-sub{font-family:'Saira Condensed';font-weight:600;font-size:clamp(18px,4vw,26px);color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-top:6px;}
+.match-num{font-family:'Saira Condensed';font-weight:800;font-size:22px;margin-top:14px;color:var(--muted);}
+.match-num b{color:var(--green);font-size:30px;}
+.char-art{margin:30px auto 0;max-width:560px;border:1px solid var(--line);box-shadow:0 24px 70px rgba(0,0,0,.65);overflow:hidden;border-radius:18px;}
+.char-art img{width:100%;height:auto;display:block;border-radius:18px;}
+.bars{margin:30px 0 8px;display:flex;flex-direction:column;gap:14px;width:100%;}
+.bar-row .bar-top{display:flex;justify-content:space-between;font-family:'Saira Condensed';font-weight:700;font-size:15px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.bar-row .bar-top span:last-child{color:var(--muted);}
+.bar-track{height:10px;background:rgba(21,24,29,.8);border:1px solid var(--line);width:100%;border-radius:999px;overflow:hidden;}
+.bar-fill{height:100%;width:0;background:var(--accent);transition:width 1.1s cubic-bezier(.2,.8,.2,1);border-radius:999px;}
+.bar-row.dim .bar-fill{background:#4a5160;}
+.bar-row.dim .bar-top{color:var(--muted);}
+.section-title{font-family:'Saira Condensed';font-weight:800;font-size:22px;letter-spacing:2px;text-transform:uppercase;margin:40px 0 14px;padding-left:14px;border-left:4px solid var(--accent);}
+.analysis-p{color:#c6ccd4;line-height:1.75;font-size:16px;margin-bottom:16px;}
+.analysis-p b{color:var(--text);}
+.insight{display:flex;gap:14px;background:var(--panel);border:1px solid var(--line);padding:16px 18px;margin-bottom:10px;align-items:flex-start;backdrop-filter:blur(4px);border-radius:14px;}
+.insight .ic{font-size:20px;line-height:1.3;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif;}
+.insight p{color:#c6ccd4;font-size:15px;line-height:1.6;}
+.insight p b{color:var(--text);}
+.game-callout{margin-top:26px;border:1px solid var(--accent-dim);background:linear-gradient(180deg,rgba(80,20,60,.55),rgba(10,11,13,.7));padding:20px 22px;backdrop-filter:blur(4px);border-radius:14px;}
+.game-callout .gc-title{font-family:'Saira Condensed';font-weight:800;font-size:16px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+.game-callout p{color:#c6ccd4;font-size:15px;line-height:1.65;}
+.pitch-list{margin:26px 0 10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;width:100%;}
+.pitch-item{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:linear-gradient(180deg,rgba(16,18,22,.9),rgba(10,11,13,.85));border:1px solid var(--line);padding:24px 22px 20px;backdrop-filter:blur(4px);border-radius:18px;}
+.pitch-item .pi-icon{display:flex;align-items:center;justify-content:center;width:46px;height:46px;font-size:30px;line-height:1;background:none;border:0;box-shadow:none;margin:0 auto;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif;}
+.pitch-item.pi-last .pi-icon{background:none;border:0;box-shadow:none;font-size:30px;width:46px;height:46px;}
+.pitch-item .pi-head{min-height:2.64em;font-family:'Saira Condensed';font-weight:800;font-size:18px;line-height:1.32;letter-spacing:.3px;color:var(--text);margin:0;}
+.pitch-item .pi-body{font-size:14.5px;color:#c6ccd4;line-height:1.62;margin:0;}
+@media(max-width:720px){.pitch-list{grid-template-columns:1fr;gap:12px;}.pitch-item{padding:18px 18px 16px;}}
+/* ===== Research panel (hello-nancy authority card) ===== */
+.rn-badges{text-align:center;font-family:'Saira Condensed';font-weight:800;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:24px;}
+#s-research .kicker{text-align:center;}
+.rn-badges b{color:var(--accent);}
+/* Unified authority layout: Travis's portrait is the screen background, centered,
+   with the game art fading to black around it; the text block sits in the black
+   field under his chest, centered. Mirrors the mobile treatment at every width. */
+#s-research{
+  background-color:#000;
+  background-image:url("assets/img/travis-haley-mobile.webp");
+  background-repeat:no-repeat;
+  background-position:center -3.5vh;
+  background-size:auto 74vh;
+  padding:calc(15vh - 49px) 16px 22px;
+}
+#s-research .footer-brand{margin-top:22px;}
+.rn-card{margin:calc(38vh - 36px) auto 0;max-width:440px;text-align:center;}
+.rn-photo{display:none;}
+.rn-row{display:block;}
+.rn-col{display:flex;flex-direction:column;align-items:center;text-align:center;}
+.rn-name{font-family:'Saira Condensed';font-weight:900;font-size:clamp(26px,4.4vw,34px);letter-spacing:.6px;text-transform:uppercase;color:#fff;line-height:1.04;order:2;margin-top:16px;}
+.rn-title{font-family:'Saira Condensed';font-weight:700;font-size:13.5px;letter-spacing:1.3px;text-transform:uppercase;color:#cfd6df;margin-top:6px;line-height:1.5;order:3;}
+.rn-quote{margin:0;font-size:18px;line-height:1.5;color:rgba(244,246,248,.84);font-weight:700;letter-spacing:.2px;order:1;}
+.rn-source{font-size:12.5px;line-height:1.62;color:#aab3bf;margin:12px 0 0;font-style:italic;order:4;}
+.rn-source b{color:#e7ecf1;font-style:normal;}
+.rn-arw{margin-left:10px;font-weight:400;transition:transform .16s ease;}
+.btn:hover .rn-arw{transform:translateX(4px);}
+.rn-cta{display:block;width:fit-content;margin:18px auto 0;}
+/* ==== MOBILE RESEARCH: full-bleed portrait, black field carries the text ====
+   Desktop keeps the avatar-tile card. On phones the square tile is dropped and the
+   portrait becomes the screen background; the header stays in the reserved black band
+   above his head, and the pull-quote / name / role / source drop into the black field
+   under his chest. 78vh tops him at 0.254H (head clear of the header at all heights)
+   and puts his chest line at 0.496H, so the text block is offset by vh to stay pinned
+   just below it on every screen height. */
+@media(max-width:600px){
+  #s-research{
+    background-color:#000;
+    background-image:url("assets/img/travis-haley-mobile.webp");
+    background-repeat:no-repeat;
+    background-position:center -7.5vh;
+    background-size:auto 78vh;
+    padding:26px 18px 16px;
+  }
+  #s-research .kicker{margin-bottom:6px;font-size:10.5px;letter-spacing:1.6px;}
+  .rn-badges{margin-bottom:0;font-size:10.5px;letter-spacing:1.4px;line-height:1.45;}
+  .rn-card{margin-top:calc(38vh - 40px);text-align:center;}
+  .rn-photo{display:none;}
+  .rn-row{display:block;}
+  .rn-col{align-items:center;text-align:center;}
+  .rn-quote{order:1;margin:0;font-size:18px;line-height:1.52;letter-spacing:.1px;color:rgba(244,246,248,.84);}
+  .rn-name{order:2;margin-top:12px;font-size:21px;letter-spacing:.9px;}
+  .rn-title{order:3;margin-top:5px;font-size:10.5px;letter-spacing:1.1px;line-height:1.5;color:#aeb8c4;}
+  .rn-source{order:4;margin:8px 0 0;font-size:10.5px;line-height:1.55;font-style:italic;color:#8d97a3;}
+  .rn-source b{font-style:normal;}
+  .rn-cta{margin:14px auto 0;}
+  #s-research .footer-brand{margin-top:12px;padding-top:13px;font-size:10.5px;letter-spacing:1.2px;}
+}
+/* short phones (SE / 8 / older Android): pull the portrait back to 70vh and tighten the
+   type so the Continue button still clears the fold — chest line lands at 0.445H, which
+   keeps the same "just under his chest" offset as the taller phones above. */
+@media(max-width:600px) and (max-height:730px){
+  #s-research{background-size:auto 70vh;background-position:center -5.5vh;}
+  .rn-card{margin-top:calc(35vh - 40px);}
+  .rn-quote{font-size:16px;line-height:1.5;}
+  .rn-name{margin-top:12px;font-size:19px;}
+  .rn-title{font-size:10px;}
+  .rn-source{margin-top:8px;font-size:10px;line-height:1.5;}
+  .rn-cta{margin:14px auto 0;padding:11px 24px;}
+  #s-research .footer-brand{margin-top:14px;padding-top:12px;}
+}
+/* short desktop / landscape laptops: pull the portrait in and tighten spacing so
+   the Continue button + footer still clear the fold */
+@media(max-height:800px) and (min-width:601px){
+  #s-research{background-size:auto 70vh;padding-bottom:14px;}
+  .rn-card{margin-top:calc(35vh - 34px);}
+  .rn-quote{font-size:18px;}
+  .rn-name{font-size:26px;}
+  .rn-title{font-size:12px;}
+  .rn-source{font-size:11.5px;}
+  .rn-cta{margin-top:18px;}
+  #s-research .footer-brand{margin-top:18px;}
+}
+.pitch-visual{position:relative;width:min(580px,100%);margin:30px auto 4px;border-radius:20px;overflow:hidden;border:1px solid var(--line);box-shadow:0 30px 70px rgba(0,0,0,.65);}
+.pitch-visual img{display:block;width:100%;height:auto;}
+.pitch-visual .pv-fade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(10,11,13,.5) 0%,rgba(10,11,13,0) 26%,rgba(10,11,13,.1) 58%,rgba(10,11,13,.88) 100%);}
+.pitch-visual .pv-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 7% 7%;transform:translateY(-4%);pointer-events:none;}
+.pitch-visual .pv-text span{font-family:'Saira Condensed';font-weight:900;font-style:italic;font-size:clamp(30px,5.6vw,50px);line-height:1.02;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;text-shadow:0 4px 30px rgba(0,0,0,.9),0 2px 6px rgba(0,0,0,.95);}
+.pitch-visual .pv-cap{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-family:'Saira Condensed';font-weight:800;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:rgba(255,255,255,.55);}
+.pitch-item p{font-size:15px;color:#c6ccd4;line-height:1.6;}
+.pitch-item p b{color:var(--text);}
+/* ===== Product recommendation cards (EDM-style grid) ===== */
+#cta-cards{width:100%;display:grid;grid-template-columns:repeat(2,1fr);gap:18px;align-items:stretch;}
+@media(max-width:720px){#cta-cards{grid-template-columns:1fr;gap:14px;}}
+#cta-cards .rec-card{background:#14171d;border:1px solid var(--line);border-radius:20px;overflow:hidden;text-decoration:none;display:flex;flex-direction:column;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;backdrop-filter:blur(4px);}
+#cta-cards .rec-card:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 16px 40px rgba(0,0,0,.5);}
+#cta-cards .rec-card .rc-media{background:#fff;height:190px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto;}
+#cta-cards .rec-card .rc-media img{width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;padding:4px;display:block;}
+#cta-cards .rec-card .rc-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;padding:14px 18px 16px;text-align:left;}
+#cta-cards .rec-card .rc-name{font-family:'Saira Condensed';font-weight:800;font-size:19px;letter-spacing:.8px;text-transform:uppercase;color:#ffffff;line-height:1.12;display:block;}
+#cta-cards .rec-card .rc-ingame{font-family:'Saira Condensed';font-weight:700;font-size:11.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--accent);margin-top:5px;}
+#cta-cards .rec-card .rc-ingame::before{content:"// IN-GAME: ";}
+#cta-cards .rec-card p{color:var(--muted);font-size:13.5px;line-height:1.62;margin:9px 0 14px;flex:1 1 auto;}
+#cta-cards .rec-card p b{color:var(--text);}
+#cta-cards .rec-card .rc-foot{margin-top:auto;display:flex;justify-content:flex-end;align-items:center;gap:10px;}
+#cta-cards .rec-card .rc-price{font-family:'Saira Condensed';font-weight:700;font-size:17px;letter-spacing:1px;color:var(--green);white-space:nowrap;}
+#cta-cards .rec-card .rc-btn{display:inline-block;background:#f2a900;color:#fff;font-family:'Saira Condensed';font-weight:800;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;padding:9px 22px;border-radius:999px;white-space:nowrap;line-height:1;}
+#cta-cards .rec-card.plain{grid-column:1/-1;display:block;background:linear-gradient(180deg,rgba(16,18,22,.92),rgba(10,11,13,.88));}
+#cta-cards .rec-card.plain .rc-top{padding:15px 18px 0;}
+#cta-cards .rec-card.plain p{padding:8px 18px 16px;flex:none;}
+@media(max-width:720px){#cta-cards .rec-card.plain{grid-column:auto;}}
+.safety-note{margin-top:26px;border:1px solid var(--line);padding:14px 18px;color:var(--muted);font-size:12.5px;line-height:1.65;letter-spacing:.3px;background:var(--panel);backdrop-filter:blur(4px);border-radius:14px;}
+.safety-note b{color:var(--amber);}
+.footer-brand{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);width:100%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;color:var(--muted);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-family:'Saira Condensed';font-weight:600;}
+.footer-brand a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--muted);}
+.footer-brand a:hover{color:var(--accent);}
+.actions-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;}
+#cta-cards{width:100%;}
+#cta-cards .rec-card,#cta-cards .rec-card .rc-body{text-align:left;}
+.email-box{width:min(520px,100%);margin:28px auto 0;border:1px solid var(--line);border-radius:18px;padding:22px 24px;background:linear-gradient(180deg,rgba(16,18,22,.9),rgba(10,11,13,.85));backdrop-filter:blur(6px);text-align:center;}
+.email-box .eb-head{font-family:'Saira Condensed';font-weight:800;font-size:20px;letter-spacing:1.5px;text-transform:uppercase;}
+.email-box .eb-sub{color:var(--muted);font-size:13px;line-height:1.6;margin:8px 0 16px;}
+.email-box form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.email-box input{flex:1;min-width:220px;background:#0b0e13;border:1px solid var(--line);color:var(--text);padding:12px 14px;border-radius:12px;font-size:14px;}
+.email-box input:focus{outline:none;border-color:var(--accent);}
+.email-box .eb-ok{color:var(--green);font-size:14px;font-weight:600;padding:8px 0;}
+@media(max-width:520px){.email-box form{flex-direction:column;}.email-box input{min-width:0;}}
+
+.airsoft-intro{margin:30px auto 0;max-width:680px;text-align:center;background:linear-gradient(180deg,rgba(16,18,22,.9),rgba(10,11,13,.86));border:1px solid var(--line);border-radius:18px;padding:14px 14px 18px;backdrop-filter:blur(6px);}
+.airsoft-intro .ai-img{display:block;width:100%;height:auto;border-radius:14px;}
+.airsoft-intro .ai-img:hover{opacity:.92;}
+.airsoft-intro a.ai-link{display:inline-block;margin-top:14px;color:var(--accent);font-family:'Saira Condensed';font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:13px;text-decoration:none;border-bottom:1px solid var(--accent);padding-bottom:2px;}
+.airsoft-intro a.ai-link:hover{color:#fff;border-color:#fff;}
+</style>
+</head>
+<body class="panel-all hook-center">
+<div id="bg"></div><div id="bg-shade"></div><div id="bg-grid"></div>
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="progress-label"></div>
+<div id="app">
+
+  <!-- HOOK -->
+  <section class="screen active" id="s-hook">
+    <div class="wrap panelized" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+      <div class="kicker">// 60-second background check for Leonida residents</div>
+      
+      <div class="hook-card"><img src="assets/img/gta6-card.webp" alt="GTA VI" onerror="this.parentNode.style.display='none'"></div>
+      <p class="lead" style="text-align:center;">Vice City runs on <b>characters</b> — the muscle, the boss, the hustler, the legend. Answer 8 questions and we'll match you to the confirmed cast of GTA VI, then hand you the replica that fits the way they move.</p>
+      <button class="btn" style="margin-top:28px;" onclick="startQuiz()">Begin Assessment</button>
+      <div class="hint">Selecting an option moves you to the next step</div>
+      <div class="footer-brand"><span>Operator Role Assessment</span><span><a href="index.html">Other games</a></span></div>
+    </div>
+  </section>
+
+  <!-- QUESTIONS (injected) -->
+  <div id="question-screens"></div>
+
+  <!-- ANALYZING -->
+  <section class="screen" id="s-analyzing">
+    <div class="wrap" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="analyzing-head"><span class="accent">// Processing</span>Running Your Leonida Background Check</div>
+      <div class="analyzing-box">
+        <div class="term" id="term"></div>
+        <button class="btn" id="reveal-btn" style="display:none;margin-top:22px;width:100%;" onclick="showResult()">Reveal My Role</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section class="screen" id="s-result">
+    <div class="wrap">
+      <div style="text-align:center;">
+        <div class="result-badge" id="r-badge"></div>
+        <div class="archetype" id="r-name"></div>
+        <div class="archetype-sub" id="r-sub"></div>
+        <div class="match-num">Role match: <b id="r-match"></b></div>
+      </div>
+      <div class="char-art" id="r-char" style="display:none;"><img id="r-char-img" alt="Character" onerror="imgRetry(this)"></div>
+      <div class="bars" id="r-bars"></div>
+      <div class="section-title">Your Personality Analysis</div>
+      <div id="r-analysis"></div>
+      <div class="section-title">What Your Answers Reveal</div>
+      <div id="r-insights"></div>
+      <div class="game-callout" id="r-game"></div>
+      <div class="actions-row" style="justify-content:center;margin-top:34px;">
+        <button class="btn" onclick="go('s-pitch')">Continue</button>
+        <button class="btn ghosted" onclick="restart()">Retake</button>
+      </div>
+      <div class="footer-brand"><span>Operator Role Assessment</span><span><a href="index.html">Other games</a></span></div>
+    </div>
+  </section>
+
+  <!-- PITCH -->
+  <section class="screen" id="s-pitch">
+    <div class="wrap" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+      <div class="kicker">// The uncomfortable truth</div>
+      <h2 class="q-title" style="font-size:clamp(28px,5.8vw,46px);text-transform:uppercase;font-weight:800;letter-spacing:.5px;">Vice City <span class='accent'>doesn't respect rentals.</span></h2>
+      <p class="lead" style="margin-bottom:6px;">Here's the Leonida rule: <b>your in-game rep is borrowed. The hands are yours.</b> Jason didn't get good in a cutscene, and neither will you. The instincts your answers just revealed are real — they just need a physical home.</p>
+      <div class="pitch-visual">
+        <img src="assets/img/transition-real-life.webp" alt="A gamer drawing a white PlayStation controller from his jeans pocket while an armed robbery happens behind him — real life is not a game." decoding="async" onerror="window.imgRetry&&imgRetry(this)">
+        <div class="pv-fade"></div>
+        <div class="pv-text"><span>Real life is not a game.</span></div>
+      </div>
+      <div class="pitch-list"><div class="pitch-item"><span class="pi-icon">🚗</span><p class="pi-head">Guns are their identity.</p><p class="pi-body">In Leonida the gun is the man. Learn yours and your avatar plays itself.</p></div><div class="pitch-item"><span class="pi-icon">🐢</span><p class="pi-head">Slow is smooth.</p><p class="pi-body">Pros rehearse draw and grip until it's boring — and boring wins when shots go loud.</p></div><div class="pitch-item"><span class="pi-icon">🎯</span><p class="pi-head">The transfer is real.</p><p class="pi-body">Airsoft turns GTA instinct into trigger time — and brings you back reading rooms ahead.</p></div><div class="pitch-item pi-last"><span class="pi-icon">🚫</span><p class="pi-head">No save in real life.</p><p class="pi-body">No checkpoint, no rewind. Airsoft is cheap rehearsal for a city that never replays.</p></div></div>
+      <div class="actions-row" style="margin-top:26px;justify-content:center;">
+        <button class="btn" onclick="go('s-research')">See The Research &rarr;</button>
+      </div>
+      <div class="footer-brand"><span>Operator Role Assessment</span><span><a href="index.html">Other games</a></span></div>
+    </div>
+  </section>
+
+  <!-- RESEARCH / AUTHORITY (hello-nancy style) -->
+  <section class="screen" id="s-research">
+    <div class="wrap">
+      <div class="kicker">// Why the reps transfer</div>
+      <div class="rn-badges">Backed by research <b>&middot;</b> Recommended by professionals</div>
+      <div class="rn-card">
+        <div class="rn-row">
+          <div class="rn-photo">
+            <img class="rn-avatar" src="assets/img/travis-haley.webp" alt="Travis Haley, Founder, Haley Strategic Partners" width="200" height="200" loading="lazy" decoding="async" onerror="this.style.display='none'">
+          </div>
+          <div class="rn-col">
+            <div class="rn-name">Travis Haley</div>
+            <div class="rn-title">Former Force Recon Marine &amp; ex-CEO of Magpul Dynamics &mdash;&nbsp;<span style="white-space:nowrap">Founder, Haley Strategic Partners</span></div>
+            <blockquote class="rn-quote">“There’s absolutely a crossover if you train correctly with airsoft. … The airsoft gun is going to tell you if your trigger control is off quicker than your live-fire gun. … Tactical reloading and speed reloading — very consistent, very much of a crossover right here. Magazine inserts just like a live-fire gun.”</blockquote>
+            <div class="rn-source"><b>Source:</b> Haley, T. (2011). <i>Travis Haley: Airsoft X Training</i> [Video]. Haley Strategic Partners. Retrieved from <a href='https://www.youtube.com/watch?v=87uj5_2hEGk' target='_blank' rel='noopener'>youtube.com/watch?v=87uj5_2hEGk</a></div>
+          </div>
+        </div>
+        <button class="btn rn-cta" onclick="go('s-cta')">I want to be more than just a game</button>
+      </div>
+      <div class="footer-brand"><span>Operator Role Assessment</span><span><a href="index.html">Other games</a></span></div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="screen" id="s-cta">
+    <div class="wrap" style="text-align:center;display:flex;flex-direction:column;align-items:center;">
+      <div class="kicker">// Your training blueprint</div>
+      <h2 class="q-title" style="font-size:clamp(28px,5.8vw,46px);text-transform:uppercase;font-weight:800;letter-spacing:.5px;">Move like the <span class="accent" id="cta-role"></span><br>of Vice City.</h2>
+      <p class="lead" id="cta-lead" style="margin-bottom:26px;">Every character in Leonida has a signature platform. Based on your result, <b>{ctaLine}</b>. Train with the replica first. Master it. Then walk back into Vice City like you own the block.</p>
+      <div id="cta-cards"></div>
+            <div class="airsoft-intro">
+        <a href="https://www.redwolfairsoft.com/what-is-airsoft" target="_blank" rel="noopener"><img class="ai-img" src="assets/img/what-is-airsoft.webp" alt="What is Airsoft?" loading="lazy" decoding="async"></a>
+        <a class="ai-link" href="https://www.redwolfairsoft.com/what-is-airsoft" target="_blank" rel="noopener">Read the full guide &rarr;</a>
+      </div>
+
+      <div class="safety-note"><b>Safety briefing:</b> Airsoft replicas are not toys. Always wear proper eye protection, follow your local airsoft field rules and check your region's age and ownership laws before purchasing. Players under 18 — bring a parent or guardian into this. They'll want in anyway.</div>
+      <div class="email-box" id="email-box">
+        <div class="eb-head">📬 Your Operator File — by email</div>
+        <p class="eb-sub">Get your full role breakdown, your recommended platform list, and first-access deals. One email. Unsubscribe anytime.</p>
+        <form id="email-form" autocomplete="off" onsubmit="return false;">
+          <input type="email" id="email-in" placeholder="you@example.com" required>
+          <button type="submit" class="btn" id="email-btn">Send Me My File</button>
+        </form>
+        <div class="eb-ok" id="email-ok" style="display:none;">✅ Locked in. Watch your inbox for your Operator File — we'll send training notes and deals for your platform.</div>
+      </div>
+      <div class="actions-row" style="margin-top:30px;justify-content:center;">
+        <button class="btn" onclick="go('s-result')">&larr; Back to My Analysis</button>
+        <button class="btn ghosted" onclick="restart()">Retake Assessment</button>
+      </div>
+      <div class="footer-brand"><span>Operator Role Assessment</span></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const PRODUCTS = {"tm_strike_warrior": {"name": "Tokyo Marui Strike Warrior 1911 GBB", "ingame": "1911", "price": 125.99, "url": "https://redwolfairsoft.com/redwolf/airsoft/Gas_Pistols_SMGs_Tokyo_Marui_Tokyo_Marui_Strike_Warrior.htm", "img": "assets/img/tm_strike_warrior.webp"}, "tm_deagle_chrome": {"name": "Tokyo Marui Desert Eagle .50AE Chrome GBB", "ingame": "Desert Eagle", "price": 139.99, "url": "https://redwolfairsoft.com/redwolf/airsoft/ProductDetail?prodID=13346", "img": "assets/img/tm_deagle_chrome.webp"}, "tm_m40a5_fde": {"name": "Tokyo Marui M40A5 Sniper \u2014 FDE", "ingame": "M40A5", "price": 279.99, "url": "https://www.redwolfairsoft.com/sniper-rifles-tokyo-marui-tokyo-marui-m40a5-bolt-action-sniper-rifle-flat-dark-earth.html", "img": "assets/img/tm_m40a5_fde.webp"}, "scar_h_tan": {"name": "FN SCAR-H GBBR \u2014 Tan", "ingame": "SCAR-H", "price": 305.49, "url": "https://www.redwolfairsoft.com/cybergun-fn-scar-h-gbbr-tan-by-vfc.html", "img": "assets/img/scar_h_tan.webp"}, "mp5sd3": {"name": "H&K MP5SD3 GBB (VFC)", "ingame": "MP5SD", "price": 449.99, "url": "https://www.redwolfairsoft.com/umarex-h-k-mp5-sd3-early-type-gbbr-v2-asia-edition-by-vfc.html", "img": "assets/img/mp5sd3.webp"}, "g36c": {"name": "Tokyo Marui G36C Plus AEG", "ingame": "G36C", "price": 264.99, "url": "https://www.redwolfairsoft.com/tokyo-marui-g36c-plus-airsoft-aeg.html", "img": "assets/img/g36c.webp"}, "m870_beanbag": {"name": "CYMA M870 Breacher Shotgun (CM351)", "ingame": "Beanbag Shotgun", "price": 64.99, "url": "https://www.redwolfairsoft.com/cyma-m870-3-round-brust-multi-shot-shell-loading-airsoft-shotgun-pistol-grip-cm351.html", "img": "assets/img/m870_beanbag.webp"}, "g19_gen5": {"name": "Glock 19 Gen5 GBB (VFC)", "ingame": "Glock 19", "price": 120.31, "url": "https://www.redwolfairsoft.com/umarex-glock-19-gen-5-gbb-airsoft-pistol-by-vfc.html", "img": "assets/img/g19_gen5.webp"}, "hk416a5_tan": {"name": "H&K 416A5 AEG \u2014 Tan", "ingame": "HK416", "price": 399.99, "url": "https://www.redwolfairsoft.com/electric-guns-aeg-aep-umarex-umarex-hk416-a5-aeg-asia-edition-tan-by-vfc.html", "img": "assets/img/hk416a5_tan.webp"}, "tm_scarl_mk16": {"name": "Tokyo Marui SCAR-L MK16", "ingame": "SCAR-L", "price": 441.74, "url": "https://www.redwolfairsoft.com/aeg-aep-tokyo-marui-recoil-shock-series-tokyo-marui-scar-l-mk-16-mod-0-flat-black-recoil-shock.html", "img": "assets/img/tm_scarl_mk16.webp"}, "ump9_dx": {"name": "H&K UMP9 DX GBB", "ingame": "UMP", "price": 239.99, "url": "https://www.redwolfairsoft.com/gbb-rifles-smgs-umarex-umarex-vfc-ump9-dx-gbb-asia-edition.html", "img": "assets/img/ump9_dx.webp"}, "fiveseven_tan": {"name": "FN Five-seveN GBB \u2014 Tan", "ingame": "Five-seveN", "price": 107.99, "url": "https://www.redwolfairsoft.com/cybergun-fn-herstal-licensed-five-seven-gbb-airsoft-pistol-tan.html", "img": "assets/img/fiveseven_tan.webp"}, "gg_g980_se": {"name": "G&G G980 SE Kar98k", "ingame": "Kar98k", "price": 341.99, "url": "https://www.redwolfairsoft.com/g-g-g980-se.html", "img": "assets/img/gg_g980_se.webp"}, "ares_kar98k": {"name": "ARES Kar98k \u2014 Steel Ver.", "ingame": "Kar98k", "price": 499.99, "url": "https://www.redwolfairsoft.com/ares-kar98k-spring-steel-version.html", "img": "assets/img/ares_kar98k.webp"}, "krytac_vector": {"name": "KRYTAC Kriss Vector AEG", "ingame": "Vector", "price": 433.99, "url": "https://www.redwolfairsoft.com/electric-guns-aeg-aep-krytac-krytac-kriss-vector-aeg-limited-edition.html", "img": "assets/img/krytac_vector.webp"}, "hk416d_cgs": {"name": "Umarex HK416D GBB (CGS)", "ingame": "M416", "price": 431.19, "url": "https://www.redwolfairsoft.com/umarex-lightning-series-hk416d-gbb-airsoft-rifle-black-by-cgs.html", "img": "assets/img/hk416d_cgs.webp"}, "cyma_akm": {"name": "CYMA AKM \u2014 Wood & Steel", "ingame": "AKM", "price": 175.99, "url": "https://www.redwolfairsoft.com/cyma-akm-airsoft-aeg-rifle-metal-hi-power-wood-version-cm048m.html", "img": "assets/img/cyma_akm.webp"}, "m249_para": {"name": "A&K M249 PARA", "ingame": "M249", "price": 371.99, "url": "https://www.redwolfairsoft.com/a-k-m249-para-light-machine-gun-aeg-black.html", "img": "assets/img/m249_para.webp"}, "m249_mkii": {"name": "A&K M249 MKII", "ingame": "M249", "price": 371.99, "url": "https://www.redwolfairsoft.com/a-k-m249-mkii-light-machine-gun-aeg-black.html", "img": "assets/img/m249_mkii.webp"}, "gg_g980_co2": {"name": "G&G G980 Kar98k \u2014 CO2", "ingame": "Kar98k", "price": 407.99, "url": "https://www.redwolfairsoft.com/classic-rifles-g-g-g-g-g980.html", "img": "assets/img/gg_g980_co2.webp"}, "ka_svd": {"name": "King Arms SVD Dragunov", "ingame": "Dragunov", "price": 211.19, "url": "https://www.redwolfairsoft.com/king-arms-svd-dragunov-airsoft-aeg-sniper-rifle-ultra-grade-black.html", "img": "assets/img/ka_svd.webp"}, "mp7_vfc": {"name": "H&K MP7 GBB (VFC)", "ingame": "MP7", "price": 249.99, "url": "https://www.redwolfairsoft.com/gbb-rifles-smgs-umarex-umarex-vfc-mp7-smg-gbbr-v2-asia-edition.html", "img": "assets/img/mp7_vfc.webp"}, "m4a1_salvo": {"name": "DD M4A1 RIS III GBB", "ingame": "M4A1", "price": 386.99, "url": "https://www.redwolfairsoft.com/salvo-precision-daniel-defense-m4a1-ris-iii-gbb-airsoft-rifle.html", "img": "assets/img/m4a1_salvo.webp"}, "scarl_cyma": {"name": "FN SCAR-L AEG \u2014 Tan", "ingame": "SCAR-L", "price": 190.79, "url": "https://www.redwolfairsoft.com/cybergun-fn-scar-l-airsoft-aeg-rifle-tan-metal-version-cm063-by-cyma.html", "img": "assets/img/scarl_cyma.webp"}, "m249_mki": {"name": "A&K M249 MKI SAW", "ingame": "M249", "price": 389.99, "url": "https://www.redwolfairsoft.com/a-k-m249-mki-saw-airsoft-lmg-aeg-black.html", "img": "assets/img/m249_mki.webp"}};
+const CONFIG = {"questions": [{"title": "The score is set. The plan is <span class='accent'>one bad decision</span> from going loud.", "sub": "Everyone's looking at you. What's the read?", "opts": [["I'm in. Never had a choice.", "", {"jason": 2}], ["Run it twice. Smart only.", "", {"lucia": 2}], ["Double the buy-in.", "", {"raul": 2}], ["It's a sting. Stand down.", "", {"cal": 2}]], "icons": ["easy_life", "smart_moves", "double_down", "forum_sleuth"]}, {"title": "Pick your <span class='accent'>perfect Vice City night</span>", "sub": "Sunset to sunrise. Choose like it's your last free one.", "opts": [["Studio listening session", "", {"drequan": 2}], ["Club takeover with the crew", "", {"dimez": 2}], ["Marina boat. No plans.", "", {"jason": 2}], ["My Jack of Hearts booth", "", {"boobie": 2}]], "icons": ["studio_session", "club_moment", "marina_night", "vip_booth"]}, {"title": "How did you end up <span class='accent'>running your lane</span>?", "sub": "Every Leonida story has an origin.", "opts": [["Hustle became an empire", "", {"boobie": 2}], ["Hustle now. Music always.", "", {"drequan": 2}], ["Golden-age boatyard man", "", {"brian": 2}], ["One last score. Forever.", "", {"raul": 2}]], "icons": ["legit_empire", "music_hustle", "golden_routes", "last_scores"]}, {"title": "The crew's compromised. <span class='accent'>Cops are 3 minutes out.</span>", "sub": "You get one call. Make it.", "opts": [["Cool head. New plan. Walk.", "", {"lucia": 2}], ["I'll hold their attention.", "", {"jason": 2}], ["Scanner knew. Follow me.", "", {"cal": 2}], ["The youths handle it.", "", {"brian": 2}]], "icons": ["cool_head", "hold_attention", "scanner_call", "never_here"]}, {"title": "Pick your <span class='accent'>signature piece</span>", "sub": "In Leonida, the gun is the personality.", "opts": [["The same compact sidearm", "", {"jason": 2}], ["Classic 1911. Old-school.", "", {"raul": 2}], ["Something chrome. Loud.", "", {"boobie": 2}], ["Wrapped hands. Daily reps.", "", {"lucia": 2}]], "icons": ["trusty_sidearm", "classic_1911", "chrome_statement", "wrapped_hands"]}, {"title": "Cameras caught everything. It's <span class='accent'>all over the feed.</span>", "sub": "Vice City is watching. Reaction?", "opts": [["Perfect. We ARE the feed.", "", {"dimez": 2}], ["Scrub it. Kill the story.", "", {"drequan": 2}], ["The comms were the problem.", "", {"cal": 2}], ["What-tok? Off my boatyard.", "", {"brian": 2}]], "icons": ["caption_it", "scrub_it", "comms_worry", "get_off_my_lawn"]}, {"title": "Be honest. Your <span class='accent'>biggest weakness</span> is…", "sub": "The assessment knows anyway.", "opts": [["Stakes go up. So do I.", "", {"raul": 2}], ["Family first. Always.", "", {"lucia": 2}], ["Brands don't have bad days.", "", {"dimez": 2}], ["I know too much.", "", {"cal": 2}]], "icons": ["stakes_up", "family_first", "brand_care", "knows_too_much"]}, {"title": "Vice City, <span class='accent'>in one sentence</span>:", "sub": "Define the city or it defines you.", "opts": [["Smile. Own the block.", "", {"boobie": 2}], ["Be the talk of the city.", "", {"dimez": 2}], ["The golden age never ended.", "", {"brian": 2}], ["Hustle. Adapt. Repeat.", "", {"drequan": 2}]], "icons": ["smile_own", "they_talk", "golden_age", "adapt_hustle"]}], "archetypes": {"jason": {"name": "JASON DUVAL", "sub": "The Reluctant Professional", "img": "assets/img/jason.webp", "traits": [["Loyalty", 92], ["Composure", 84], ["Adaptability", 78], ["Ambition", 41]], "analysis": ["Your answers line up with Leonida's quietest problem: <b>you never really chose this life — you just kept surviving it.</b> Army stint, odd jobs for local runners, rent paid in favors. You want the easy life, but you're exactly the kind of person trouble goes looking for, and somehow you're always the one still standing when the smoke clears.", "You're calm in a way that unsettles people. When the plan goes loud you get quieter, not louder — reading the room while everyone else burns it down. Rockstar's own line about Jason fits you perfectly: <b>meeting the right person could be the best or worst thing that ever happens to you.</b> Probably both."], "insights": [["🎖️", "<b>You didn't choose the life — you kept surviving it.</b> That's a skill most people never learn, and Leonida pays for it."], ["❄️", "<b>Pressure makes you quieter, not louder.</b> People mistake it for calm. It's actually focus."], ["⚠️", "<b>Your five-year plan is 'figure it out later.'</b> Sometimes that works. In Vice City, usually not."]], "ctaLine": "the compact sidearm Jason keeps low at his side", "recs": [["g19_gen5", "Jason's shot leans on a compact black pistol, low and loose in his hand. The Glock 19 Gen5 GBB is that exact energy — unflashy, always ready, zero excuses."], ["ump9_dx", "Keys runner energy in rifle form. The UMP9 DX is what you grab when the marina meeting stops being a meeting."]]}, "lucia": {"name": "LUCIA CAMINOS", "sub": "The Smart Move", "img": "assets/img/lucia.webp", "traits": [["Discipline", 94], ["Loyalty", 88], ["Grit", 86], ["Patience", 60]], "analysis": ["Fresh out of Leonida Penitentiary and already back in the gym — that's your entire philosophy in one image. <b>You learned to fight young, you've paid for the mistakes, and you are done paying for them twice.</b> Where others panic or posture, you rehearse. Every answer you gave was a plan, not a reaction.", "You're the strategic center of gravity for everyone around you. People follow your calm without realizing that's what they're doing. Rockstar writes Lucia as someone committed to <b>only smart moves from here</b> — knowing full well Vice City is the worst possible place to keep that promise. You'd keep it anyway. That's the point."], "insights": [["🥊", "<b>You train when nobody's watching.</b> That's why you win when everybody is."], ["🧠", "<b>'Smart moves' is your whole religion.</b> You've done time for the dumb ones — never again."], ["👪", "<b>Family is the mission.</b> Everything else is negotiable, including you."]], "ctaLine": "the precise, underrated sidearm that fits Lucia's wrapped-hands work ethic", "recs": [["fiveseven_tan", "No gun in Lucia's shot — just wrapped hands and a plan. But if she carried, it'd be the FN Five-seveN: precise, underestimated, and more than most can handle."], ["hk416a5_tan", "Clean, modern, zero wasted motion. The HK416 A5 is the rifle version of 'only smart moves from here.'"]]}, "cal": {"name": "CAL HAMPTON", "sub": "The Homefront Analyst", "img": "assets/img/cal.webp", "traits": [["Awareness", 90], ["Paranoia", 95], ["Loyalty", 75], ["Field Skills", 22]], "analysis": ["You are, officially, the safest person in Leonida — because you never leave the house. <b>Your battlefield is the scanner, the forums, the private browser tabs.</b> While the crew is out doing the actual crime, you already know which Coast Guard cutter moved and what that means for the boat schedule. Information is your product, and business is good.", "Here's the thing your answers make obvious: the paranoia is load-bearing. Half of what you 'know' is nonsense. The other half saves everyone's life roughly once a month, which is why nobody ever makes you leave. Rockstar calls Cal a man <b>'at the low tide of America and happy there'</b> — you don't need the tide. You need a few beers and the feed."], "insights": [["📡", "<b>You hear everything first.</b> The scanner is your throne room and you never leave it."], ["🔍", "<b>Half your theories are insane.</b> The other half keep the crew alive. Nobody knows which half is which — including you."], ["🍺", "<b>You're the friend who's always home.</b> In Leonida, that's a tactical advantage."]], "ctaLine": "couch-overwatch perfected — the rifle for a man who never leaves the house", "recs": [["ka_svd", "Cal never leaves the couch, but his eyes never leave the water. The SVD Dragunov is overwatch perfected: range, patience, and zero cardio required."], ["gg_g980_se", "One shot, from a stable position, days of observation in between. The G980 Kar98k respects the couch as much as you do."]]}, "boobie": {"name": "BOOBIE IKE", "sub": "The Vice City Legend", "img": "assets/img/boobie.webp", "traits": [["Business Sense", 95], ["Influence", 90], ["Street Rep", 88], ["Patience", 70]], "analysis": ["All smiles until it's time to talk business — and business is <b>real estate, the Jack of Hearts, and a record label with your name on the paperwork.</b> You're one of the few in Vice City who turned the streets into an empire that's legitimate on paper, which is exactly why it works. Your chair is leather, your cash is stacked, and your chrome hand-cannon sits on the desk less as a weapon than as a letterhead.", "Your power move is patience. Others chase the score; you own the block it happens on. People come to you for favors they don't know they'll owe. By the time the conversation gets serious, you've already won it — <b>because you scheduled it, catered it, and own the building it's in.</b>"], "insights": [["💼", "<b>Legit is the best cover.</b> Your empire has paperwork, and the paperwork always wins."], ["🕶️", "<b>You're a legend and you act like one.</b> In Vice City, that is a full-time job."], ["👑", "<b>Everyone comes through your door.</b> You just decide what the cover charge is."]], "ctaLine": "the chrome statement piece sitting on Boobie's desk", "recs": [["tm_deagle_chrome", "The chrome pistol on Boobie's desk says everything before he does. The Tokyo Marui Desert Eagle .50AE Chrome Stainless is the loudest handshake in airsoft."], ["krytac_vector", "Compact, controlled, club-friendly. The Vector is what stays under the counter at the Jack of Hearts."]]}, "drequan": {"name": "DRE'QUAN PRIEST", "sub": "The Hustler Executive", "img": "assets/img/drequan.webp", "traits": [["Vision", 92], ["Talent Scout", 90], ["Adaptability", 80], ["Muscle", 35]], "analysis": ["You were always more hustler than gangster — <b>the streets were funding, not the destination.</b> Your answers all point the same direction: you see the angle before anyone else, and the angle is usually people. Signing the right act, booking the right room, knowing when the strip club circuit is a ladder and not a ceiling. That's not luck. That's a business plan running in real time.", "Your risk profile is the most interesting in Leonida: you don't love danger, you love what danger can be converted into. Every move you make is a bridge to the next, bigger room. Rockstar writes Dre'Quan as a man whose <b>days of booking acts into Boobie's club might be numbered</b> — because he's aiming at the whole Vice City scene. So are you."], "insights": [["🎤", "<b>You spot talent before it's talent.</b> Your instincts are a scouting report."], ["📈", "<b>Every hustle funds the next one.</b> You're building a ladder, not a score."], ["🤝", "<b>You know exactly who matters.</b> And more importantly, who's about to."]], "ctaLine": "the compact, controlled piece that fits Dre'Quan's club-side style", "recs": [["krytac_vector", "Compact, controlled, club-friendly. The KRYTAC Vector is the only gun that matches Dre'Quan's energy — business up front, party underneath."], ["mp7_vfc", "Small, fast, everywhere at once. The MP7 GBB is the touring musician of airsoft — always in the bag, always works."]]}, "dimez": {"name": "REAL DIMEZ", "sub": "Bae-Luxe & Roxy — The Moment", "img": "assets/img/dimez.webp", "traits": [["Charisma", 96], ["Brand Game", 94], ["Nerve", 82], ["Subtlety", 15]], "analysis": ["You have the savviest skill set in Leonida: <b>turning nerve into content and content into cash.</b> Real Dimez shook down local dealers and turned the receipts into rap tracks and a relentless social feed — you don't just attend the moment, you ARE the moment, and everyone's phone agrees. Subtlety scored lowest on your chart, and honestly? That's the brand.", "Underneath the flash is real hustle IQ. You understand attention better than marketers with MBAs, and you're braver than half the shooters in the city. The feed is your territory the way canals are Brian's — <b>you've never been anywhere that wasn't filming.</b> Lightning already struck once. You're absolutely sure it will again."], "insights": [["📱", "<b>The camera is your home turf.</b> You've never once walked into a room without making it a scene."], ["💅", "<b>Nerve is your currency.</b> You spend it daily and you've never been overdrawn."], ["🔥", "<b>Lightning struck once.</b> You're betting everything it strikes twice. In Vice City, that's a plan."]], "ctaLine": "the small, loud flex that matches Real Dimez energy", "recs": [["mp7_vfc", "Small, loud, impossible to ignore — the H&K MP7 GBB is Real Dimez in gun form. Fits in the bag, runs the whole club."], ["fiveseven_tan", "Sleek, flashy, not what anyone expected. The Five-seveN is the pistol equivalent of a viral verse."]]}, "raul": {"name": "RAUL BAUTISTA", "sub": "The High Roller", "img": "assets/img/raul.webp", "traits": [["Boldness", 95], ["Charm", 88], ["Experience", 90], ["Risk Control", 30]], "analysis": ["Confidence, charm, cunning — <b>and a phone that never stops ringing.</b> Your answers read like a seasoned bank robber's resume: one last score, a bigger crew, better upside, and absolutely no consideration of what the last score cost. You're the one people gamble with, because you make risk feel like charisma. Sometimes it is.", "Here's the honest read: you're the most experienced person in every room and the least satisfied. The money bag on the car seat isn't a payday — it's a down payment on the next one. Rockstar's warning about Raul applies to you directly: <b>sooner or later the crew has to double down or pull their chips.</b> You already know which one you'd pick. That's your superpower and your rap sheet."], "insights": [["🎰", "<b>You bet big because you've survived it.</b> Survivorship is a strategy, until it isn't."], ["🤵", "<b>Charm opens every door.</b> Including the ones that should stay closed."], ["📈", "<b>The stakes keep going up.</b> So do you. That's the whole problem."]], "ctaLine": "the classic 1911 Raul holds while the cash rides shotgun", "recs": [["tm_strike_warrior", "Raul's shot puts a 1911 in his hand with a bag of cash on the seat. The Tokyo Marui Strike Warrior is that classic confidence, modernized — a century-old design that still runs the room."], ["scar_h_tan", "Big, loud, unapologetic. The SCAR-H GBBR is what happens when a 7.62 personality picks a rifle."]]}, "brian": {"name": "BRIAN HEDER", "sub": "The Golden Age Survivor", "img": "assets/img/brian.webp", "traits": [["Street Wisdom", 93], ["Connections", 85], ["Delegation", 99], ["Cardio", 12]], "analysis": ["You are the last of a breed — <b>a golden-age Keys smuggler who watched everyone else retire, get caught, or disappear, and simply kept the routes.</b> Your answers ooze the calm of a man who has survived everything by making sure it happened to someone younger. Delegation scored 99 for a reason: you've been around long enough to know the dirty work is for the guy who needs the rent discount.", "But let's give it its flowers: your experience is a real asset. You know which canals freeze over, which deputies can be paid, which marinas talk and which don't. Vice City has no use for nostalgia until it needs someone who <b>remembers where the bodies and the product are both buried.</b> Then it calls you. And you send Jason."], "insights": [["🚤", "<b>The routes are your retirement plan.</b> You know the water better than the Coast Guard does."], ["🌅", "<b>The golden age never ended.</b> Everyone else just left. You kept the keys."], ["🍺", "<b>You delegate beautifully.</b> Why swim when the young ones can carry it?"]], "ctaLine": "the wood-and-steel classic that matches Brian's boatyard philosophy", "recs": [["cyma_akm", "Brian's from the era when things were built to last. The CYMA AKM — wood and steel, no batteries, no nonsense — is his whole philosophy at $175.99."], ["gg_g980_co2", "A CO2 Kar98k: old-school bolt action that hits like the good old days. Brian approves of anything that needs no charging cable."]]}}, "terminal": ["> PULLING LEONIDA COUNTY RECORDS ........ OK", "> RUNNING VICE CITY PD WATCHLIST MATCH ..", "> SCANNING MARINA & BOATYARD REGISTRY ... OK", "> CONSULTING ONLY RAW RECORDS ROSTER .... OK", "> MATCHING OPERATOR PROFILE ............."], "game_read": "This assessment maps your instincts onto the eight confirmed faces of Leonida — Jason, Lucia, Cal, Boobie, Dre'Quan, Real Dimez, Raul and Brian — the cast Rockstar revealed for Grand Theft Auto VI. Your result isn't who you'll play on screen. It's who you already are when the easy score goes sideways.", "cta_lead": "Every character in Leonida has a signature platform. Based on your result, <b>{ctaLine}</b>. Train with the replica first. Master it. Then walk back into Vice City like you own the block.", "game_name": "GTA VI"};
+const EMOJI = {"age_kid": "🧒", "age_teen": "🧑", "age_adult": "👤", "age_vet": "🎖️", "breach_charge": "💥", "knock_door": "🚪", "door_mirror": "🔦", "flank": "🔀", "chevrons": "🎖️", "door_burst": "🔨", "scope": "🎯", "shield": "🛡️", "crosshair_shot": "🎯", "flashbang": "⚡", "gas_cloud": "💨", "reposition": "🔀", "rifle_scope": "🔭", "rifle_charge": "💣", "rifle_comms": "📻", "shield_bolt": "🛡️", "crown": "👑", "door_arrow": "🚪", "mask": "😈", "heart_shield": "❤️", "eye_hold": "👁️", "door_push": "🚪", "squad": "👥", "lockdown": "🔒", "target_shot": "🎯", "smoke_push": "💨", "regroup": "🔁", "tracers": "💫", "glass_shot": "🎯", "full_breach": "💥", "clock_arrow": "⏱️", "shield_advance": "🛡️", "hotdrop": "⬇️", "containers": "📦", "map_pin_star": "📍", "plane": "✈️", "pistol": "🔫", "helmet": "⛑️", "sniper_rifle": "🔭", "vehicle": "🚙", "rotate_center": "🔄", "edge_ride": "🛣️", "third_party": "🦅", "fortify": "🛡️", "ghillie": "🌿", "rifle_redot": "🔴", "rifle_full": "🔫", "m249": "🔥", "headset": "🎧", "grenade": "💣", "anchor": "⚓", "hill_flag": "🚩", "muzzle_flash": "💥", "prone_shot": "🎯", "grenade_pin": "📌", "hook_bait": "🎣", "full_auto": "🔥", "headshot": "💀", "skull": "💀", "house_shield": "🏠", "squad_wipe": "☠️", "bomb_timer": "⏰", "flag_capture": "🚩", "team_push": "🚀", "shuriken": "🗡️", "uav_radar": "📡", "airstrike": "🛩️", "helicopter": "🚁", "cluster": "💥", "quickscope": "🎯", "smg_speed": "🏃", "ar_trophy": "🏆", "lmg_thermal": "🔥", "strat_board": "📋", "angles": "📐", "rush": "🏃", "clock_spawn": "⏱️", "tempo": "🥁", "call_rotate": "🔄", "gate_lock": "🔒", "map_shot": "🗺️", "hardpoint": "📍", "killfeed": "☠️", "overtime_hold": "⏳", "easy_life": "🤙", "smart_moves": "🧠", "double_down": "🎲", "forum_sleuth": "🕵️", "studio_session": "🎧", "club_moment": "📱", "marina_night": "⛵", "vip_booth": "🥂", "legit_empire": "🏢", "music_hustle": "🎤", "golden_routes": "🚤", "last_scores": "💼", "cool_head": "❄️", "hold_attention": "🚪", "scanner_call": "📻", "never_here": "⚓", "trusty_sidearm": "🔫", "classic_1911": "🎖️", "chrome_statement": "✨", "wrapped_hands": "🥊", "caption_it": "🤳", "scrub_it": "🎬", "comms_worry": "📡", "get_off_my_lawn": "👴", "stakes_up": "📈", "family_first": "👪", "brand_care": "💅", "knows_too_much": "🤯", "smile_own": "😎", "they_talk": "🗣️", "golden_age": "🌅", "adapt_hustle": "🔄"};
+
+let scores = {};
+function resetScores(){ scores = {}; Object.keys(CONFIG.archetypes).forEach(k=>scores[k]=0); }
+resetScores();
+let ageFlag = {under13:false,minor:false};
+let qIndex = 0;
+const TOTAL = CONFIG.questions.length + 1; /* + age gate */
+
+/* build question screens at runtime */
+(function buildScreens(){
+  const host = document.getElementById("question-screens");
+  /* age gate first */
+  const ageQ = {
+    id:"s-age", kicker:"// Question 01",
+    title:'How old are <span class="accent">you?</span>',
+    sub:"First things first — Leonida County runs a background check on everybody. Even the easy money has an age limit.",
+    opts:[
+      ["Under 13",{under13:true},"age_kid"],
+      ["13 – 17",{minor:true},"age_teen"],
+      ["18 – 24",{},"age_adult"],
+      ["25 +",{},"age_vet"]
+    ]
+  };
+  host.appendChild(makeScreen(ageQ, 0, true));
+  CONFIG.questions.forEach((q,i)=> host.appendChild(makeScreen(q, i+1, false)));
+})();
+
+function makeScreen(q, idx, isAge){
+  const s = document.createElement("section");
+  s.className = "screen"; s.id = "s-q"+idx;
+  const wrap = document.createElement("div");
+  wrap.className = "wrap q-wrap";
+  const kick = document.createElement("div");
+  kick.className = "kicker";
+  kick.textContent = "// Question " + String(idx+1).padStart(2,"0");
+  const h = document.createElement("h2");
+  h.className = "q-title";
+  h.innerHTML = q.title;
+  const sub = document.createElement("p");
+  sub.className = "q-sub";
+  sub.innerHTML = q.sub;
+  const opts = document.createElement("div");
+  opts.className = "opts";
+  q.opts.forEach((o,i)=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "opt";
+    const ic = document.createElement("span");
+    ic.className = "ic";
+    ic.textContent = EMOJI[isAge ? o[2] : (q.icons ? q.icons[i] : "")] || "";
+    const txt = document.createElement("span");
+    txt.className = "txt";
+    txt.innerHTML = o[0];
+    btn.appendChild(ic); btn.appendChild(txt);
+    const weight = isAge ? o[1] : o[2];
+    btn.addEventListener("click", function(){ answer(idx, isAge, weight, btn); });
+    opts.appendChild(btn);
+  });
+  wrap.appendChild(kick); wrap.appendChild(h); wrap.appendChild(sub); wrap.appendChild(opts);
+  s.appendChild(wrap);
+  return s;
+}
+
+function go(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+function setProgress(n){
+  const pct = Math.min(100, Math.round(n/TOTAL*100));
+  document.getElementById("progress-bar").style.width = pct + "%";
+  document.getElementById("progress-label").textContent = n>0 ? n + " / " + TOTAL : "";
+}
+function startQuiz(){
+  resetScores();
+  ageFlag = {under13:false,minor:false};
+  qIndex = 0; setProgress(0); nextQ();
+}
+function nextQ(){
+  if(qIndex < TOTAL){ go("s-q"+qIndex); setProgress(qIndex+1); }
+  else { go("s-analyzing"); setProgress(TOTAL); runAnalyzing(); }
+}
+let advancing = false;
+function answer(idx, isAge, w, btn){
+  if(advancing) return;
+  advancing = true;
+  if(btn) btn.classList.add("picked");
+  document.querySelectorAll("#s-q"+idx+" .opt").forEach(b=>{ if(b !== btn) b.classList.add("faded"); });
+  if(isAge){ ageFlag.under13 = !!w.under13; ageFlag.minor = !!w.minor; }
+  else { Object.keys(w).forEach(k=>{ if(k in scores) scores[k]+=w[k]; }); }
+  qIndex++;
+  setTimeout(()=>{ advancing = false; nextQ(); }, 300);
+}
+
+/* analyzing terminal */
+function runAnalyzing(){
+  const term = document.getElementById("term");
+  const btn = document.getElementById("reveal-btn");
+  term.innerHTML = ""; btn.style.display = "none";
+  let i = 0;
+  const LINES = CONFIG.terminal;
+  (function step(){
+    if(i < LINES.length){
+      const div = document.createElement("div");
+      div.className = "line active";
+      div.innerHTML = LINES[i] + ' <span class="cursor"></span>';
+      term.appendChild(div);
+      setTimeout(()=>{
+        div.classList.remove("active"); div.classList.add("done");
+        div.innerHTML = '<span class="tick">[OK]</span> ' + LINES[i].replace("> ","");
+        i++; step();
+      }, 620 + Math.random()*380);
+    } else {
+      const done = document.createElement("div");
+      done.className = "line active";
+      done.innerHTML = '<span class="tick">[>>]</span> ROLE LOCKED';
+      term.appendChild(done);
+      btn.style.display = "block";
+    }
+  })();
+}
+
+function getWinner(){
+  const keys = Object.keys(scores);
+  let winner = keys[0], best = -1;
+  keys.forEach(k=>{ if(scores[k]>best){best=scores[k];winner=k;} });
+  return winner;
+}
+
+function showResult(){
+  const A = CONFIG.archetypes[getWinner()];
+  document.getElementById("r-badge").textContent = "// Role Confirmed — " + A.name;
+  document.getElementById("r-name").textContent = A.name;
+  document.getElementById("r-sub").textContent = A.sub;
+  document.getElementById("r-match").textContent = A.traits[0][1] + "%";
+  const rChar = document.getElementById("r-char");
+  if(A.img){ document.getElementById("r-char-img").src = A.img; rChar.style.display = "block"; }
+  else { rChar.style.display = "none"; }
+  const bars = document.getElementById("r-bars");
+  bars.innerHTML = "";
+  A.traits.forEach((t,i)=>{
+    const row = document.createElement("div");
+    row.className = "bar-row" + (i>0 ? " dim" : "");
+    row.innerHTML = '<div class="bar-top"><span>'+t[0]+'</span><span>'+t[1]+'%</span></div><div class="bar-track"><div class="bar-fill" data-w="'+t[1]+'"></div></div>';
+    bars.appendChild(row);
+  });
+  document.getElementById("r-analysis").innerHTML = A.analysis.map(p=>'<p class="analysis-p">'+p+'</p>').join("");
+  document.getElementById("r-insights").innerHTML = A.insights.map(it=>'<div class="insight"><div class="ic">'+it[0]+'</div><p>'+it[1]+'</p></div>').join("");
+  document.getElementById("r-game").innerHTML = CONFIG.game_read;
+  go("s-result");
+  setTimeout(()=>{ document.querySelectorAll(".bar-fill").forEach(b=>{ b.style.width = b.dataset.w + "%"; }); }, 150);
+}
+
+/* retry an image if the server hiccups (502/timeout), then hide it if it truly fails */
+function imgRetry(el){
+  if(!el) return;
+  if(el.naturalWidth > 0) return;
+  var t = parseInt(el.getAttribute("data-rt") || "0", 10);
+  if(t < 3){
+    el.setAttribute("data-rt", String(t + 1));
+    setTimeout(function(){
+      var base = (el.getAttribute("src") || "").split("?")[0];
+      el.src = base + "?r=" + (t + 1);
+    }, 250 * (t + 1));
+  } else if(el.parentNode){ el.parentNode.style.display = "none"; }
+}
+
+
+var PISTOL_KEYS={tm_strike_warrior:1,tm_deagle_chrome:1,g19_gen5:1,fiveseven_tan:1};function noGBB(t,k){ var w=PISTOL_KEYS[k]?"airsoft pistol":"airsoft rifle"; return (t||"").replace(/GBBR?/gi,w); }
+function recCard(r){
+  if(!r[0]){
+    const c = document.createElement("div");
+    c.className = "rec-card plain"; c.style.cursor = "default";
+    c.innerHTML =
+      '<div class="rc-top"><span class="rc-name">'+(r[2]||"Field Note")+'</span></div>'+
+      '<p>'+r[1]+'</p>';
+    return c;
+  }
+  const P = PRODUCTS[r[0]];
+  const c = document.createElement("a");
+  c.className = "rec-card"; c.href = P.url; c.target = "_blank"; c.rel = "noopener";
+  c.setAttribute("data-key", r[0]);
+  c.setAttribute("data-name", P.name);
+  c.setAttribute("data-price", P.price);
+  c.innerHTML =
+    '<div class="rc-media"><img src="'+P.img+'" alt="'+P.name+'" decoding="async" onerror="imgRetry(this)"></div>'+
+    '<div class="rc-body">'+
+      '<span class="rc-name">'+noGBB(P.name,r[0])+'</span>'+
+      '<div class="rc-ingame">'+noGBB(P.ingame,r[0])+'</div>'+
+      '<p>'+noGBB(r[1],r[0])+'</p>'+
+      '<div class="rc-foot"><span class="rc-btn">Deploy</span></div>'+
+    '</div>';
+  return c;
+}
+
+function buildCTA(){
+  const A = CONFIG.archetypes[getWinner()];
+  document.getElementById("cta-role").textContent = A.name;
+  document.getElementById("cta-lead").innerHTML = CONFIG.cta_lead.replace("{ctaLine}", "<b>"+A.ctaLine+"</b>");
+  const cards = document.getElementById("cta-cards");
+  cards.innerHTML = "";
+  if(ageFlag.under13){
+    cards.innerHTML =
+      '<div class="rec-card plain" style="cursor:default;">'+
+      '<div class="rc-top"><span class="rc-name" style="color:var(--amber)">Mission Briefing: Future Operator</span></div>'+
+      '<p>You\'ve got the instincts — that\'s the hard part. But airsoft replicas have a minimum age requirement, and the pros all started the same way: <b style="color:var(--text)">grab a parent or guardian and get them involved.</b> Show them this result, take them to a local airsoft field, and let them see what your Operator DNA looks like off-screen. Your first deployment is a family op.</p></div>';
+  } else {
+    A.recs.forEach(r=>cards.appendChild(recCard(r)));
+    if(ageFlag.minor){
+      const n = document.createElement("div");
+      n.className = "rec-card plain"; n.style.cursor = "default";
+      n.innerHTML = '<div class="rc-top"><span class="rc-name" style="color:var(--amber);font-size:16px;">Under 18? Read This First</span></div><p>You\'re cleared to dream, but purchasing requires an adult. <b style="color:var(--text)">Bring a parent or guardian in on this</b> — they handle the order, you handle the training arc. That\'s the deal.</p>';
+      cards.appendChild(n);
+    }
+  }
+}
+
+function restart(){ qIndex=0; resetScores(); ageFlag={under13:false,minor:false}; setProgress(0); document.querySelectorAll(".opt").forEach(b=>b.classList.remove("picked","faded")); go("s-hook"); }
+
+const _go = go;
+go = function(id){ if(id==="s-cta") buildCTA(); _go(id); };
+
+/* lazy-fade the game art once it actually loads */
+(function(){
+  const bg = document.getElementById("bg");
+  const img = new Image();
+  img.onload = ()=> bg.classList.add("loaded");
+  img.src = "assets/img/hero.webp";
+})();
+</script>
+
+<!-- ============ ANALYTICS (admin console) ============ -->
+<script async src="https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=TXaXYk"></script>
+<script>window.AZ_CONFIG = {"endpoint": "", "token": "CHANGE-ME-LONG-RANDOM", "game": "GTA VI", "enabled": false};</script>
+<script src="admin/analytics.js"></script>
+<script>
+/* performance: warm images so result & gun screens pop instantly */
+(function(){
+  /* preload all result portraits as soon as the quiz starts */
+  const _startQuiz = window.startQuiz;
+  if(_startQuiz){
+    window.startQuiz = function(){
+      try{
+        Object.keys(CONFIG.archetypes||{}).forEach(function(k){
+          const im = CONFIG.archetypes[k].img;
+          if(im){ const x = new Image(); x.decoding = "async"; x.src = im; }
+        });
+      }catch(e){}
+      return _startQuiz.apply(this, arguments);
+    };
+  }
+  /* once the result is known, warm that winner's recommended gun images */
+  const _showResult2 = window.showResult;
+  if(_showResult2){
+    window.showResult = function(){
+      const ret = _showResult2.apply(this, arguments);
+      try{
+        const A = CONFIG.archetypes[getWinner()];
+        (A.recs||[]).forEach(function(r){
+          if(r && r[0] && PRODUCTS[r[0]] && PRODUCTS[r[0]].img){
+            const x = new Image(); x.decoding = "async"; x.src = PRODUCTS[r[0]].img;
+          }
+        });
+        /* warm the "Real life is not a game" transition before it's reached */
+        const pv = new Image(); pv.decoding = "async";
+        pv.src = "assets/img/transition-real-life.webp";
+      }catch(e){}
+      return ret;
+    };
+  }
+})();
+</script>
+<script>
+/* hooks: answers, result, cta, gun-link clicks, email capture */
+(function(){
+  if(!window.AZ) return;
+
+  /* answer log */
+  const _answer = window.answer;
+  if(_answer){
+    window.answer = function(idx, isAge, w, btn){
+      let txt = "";
+      if(btn){ const t = btn.querySelector(".txt"); txt = t ? t.textContent : btn.textContent; }
+      if(isAge){ try{ AZ.age(txt); }catch(e){} }
+      else { try{ AZ.answer(idx, txt, w||{}); }catch(e){} }
+      return _answer.apply(this, arguments);
+    };
+  }
+
+  /* result log */
+  const _showResult = window.showResult;
+  if(_showResult){
+    window.showResult = function(){
+      const ret = _showResult.apply(this, arguments);
+      try{
+        const A = CONFIG.archetypes[getWinner()];
+        const guns = (A.recs||[]).map(function(r){
+          return r && r[0] ? (PRODUCTS[r[0]] ? PRODUCTS[r[0]].name : r[0]) : null;
+        }).filter(Boolean);
+        AZ.result(A.name, guns);
+        if(ageFlag.under13) AZ._finished();
+      }catch(e){}
+      return ret;
+    };
+  }
+
+  /* cta view + email box visibility */
+  const _go = window.go;
+  if(_go){
+    window.go = function(id){
+      if(id === "s-cta"){
+        try{ AZ.viewCta(); }catch(e){}
+        const eb = document.getElementById("email-box");
+        if(eb){ const u13 = (typeof ageFlag !== "undefined") ? ageFlag.under13 : false; eb.style.display = u13 ? "none" : ""; }
+      }
+      return _go.apply(this, arguments);
+    };
+  }
+
+  /* gun link clicks (delegated) */
+  document.addEventListener("click", function(ev){
+    const a = ev.target.closest ? ev.target.closest("a.rec-card[data-key]") : null;
+    if(!a) return;
+    try{
+      AZ.link(a.getAttribute("data-key"), a.getAttribute("data-name"),
+        a.getAttribute("data-price"), a.href);
+    }catch(e){}
+  });
+
+  /* email capture -> logged to the sheet AND triggers the backend auto-reply */
+  const form = document.getElementById("email-form");
+  if(form){
+    form.addEventListener("submit", function(ev){
+      ev.preventDefault();
+      const inp = document.getElementById("email-in");
+      const v = (inp.value||"").trim();
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)){ inp.focus(); return; }
+      const btn = document.getElementById("email-btn");
+      if(btn){ btn.disabled = true; btn.textContent = "Sending…"; }
+      try{
+        const A = CONFIG.archetypes[getWinner()];
+        const guns = (A.recs||[]).map(function(r){
+          const P = (r && r[0]) ? PRODUCTS[r[0]] : null;
+          if(!P){
+            return { name: (r && (r[2] || r[0])) || "Field Note", blurb: (r && r[1]) || "" };
+          }
+          return { key: r[0], name: P.name, ingame: P.ingame, price: P.price,
+                   url: P.url, img: P.img, blurb: r[1] || "" };
+        });
+        (function(){
+          function _send(email){
+            if (window.klaviyo && typeof window.klaviyo.subscribe === "function") {
+              window.klaviyo.subscribe(email, (function(){
+                var P=(typeof PRODUCTS!=="undefined"?PRODUCTS:{}), A_=A||{}, ABS="https://combatassessment.com/";
+                var strip=function(s){return String(s==null?"":s).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();};
+                var img=function(p){p=p||"";if(!p)return "";return /^https?:/i.test(p)?p:ABS+String(p).replace(/^\/+/,"");};
+                var PK={tm_strike_warrior:1,tm_deagle_chrome:1,g19_gen5:1,fiveseven_tan:1};
+                var noGBB=function(t,k){var w=PK[k]?"airsoft pistol":"airsoft rifle";return String(t==null?"":t).replace(/GBBR?/gi,w);};
+                var cut=function(s,n){s=String(s==null?"":s);if(s.length<=n)return s;var t=s.slice(0,n);var i=t.lastIndexOf(" ");if(i>n*0.55)t=t.slice(0,i);return t.replace(/[\s,;:.\-]+$/,"")+"\u2026";};
+                var BG={"PUBG: BATTLEGROUNDS":"assets/img/pubg-hero.webp","Ready or Not":"assets/img/ron-hero.webp","Call of Duty":"assets/img/cod-hero.webp","GTA VI":"assets/img/hero.webp"};
+                var TH={"PUBG: BATTLEGROUNDS":["#f2a900","#ffd166"],"Ready or Not":["#4d9fff","#8dc2ff"],"Call of Duty":["#ff7a00","#ffb066"],"GTA VI":["#ff2d78","#ff7fb0"]};
+                var gname=CONFIG.game_name||"", th=TH[gname]||["#e01a2b","#ff6b76"];
+                var tr=A_.traits||[], an=A_.analysis||[], ins=A_.insights||[], rc=A_.recs||[];
+                var o={ $list_id:"TaizN7", $source:"Combat Assessment",
+                  game: gname, character: strip(A_.name), character_sub: strip(A_.sub),
+                  character_img: img(A_.img), game_bg: img(BG[gname]||""),
+                  theme_accent: th[0], theme_accent_2: th[1],
+                  analysis1: strip(an[0]), analysis2: strip(an[1]),
+                  cta_lead: strip(String(CONFIG.cta_lead||"").replace("{ctaLine}", A_.ctaLine||"")),
+                  traits: tr.map(function(t){return t[0]+" "+t[1]+"%";}).join(", ") };
+                for(var i=0;i<4;i++){ var t=tr[i]; o["trait"+(i+1)+"_name"]=t?strip(t[0]):""; o["trait"+(i+1)+"_pct"]=t?String(t[1]):""; }
+                for(var k=0;k<3;k++){ var z=ins[k]||[]; o["insight"+(k+1)+"_emoji"]=z[0]?strip(z[0]):""; o["insight"+(k+1)]=z[1]?strip(z[1]):""; }
+                for(var g=0;g<2;g++){ var r=rc[g]||[], key=r[0], pr=(key&&P[key])||null;
+                  o["gun"+(g+1)+"_name"]=pr?noGBB(pr.name,key):strip(r[2]||key||"");
+                  o["gun"+(g+1)+"_ingame"]=pr?noGBB(pr.ingame,key):"";
+                  o["gun"+(g+1)+"_url"]=pr?pr.url:"";
+                  o["gun"+(g+1)+"_img"]=pr?img(pr.img):"";
+                  o["gun"+(g+1)+"_price"]=(pr&&pr.price!=null)?"$"+pr.price:"";
+                  o["gun"+(g+1)+"_blurb"]=cut(pr?noGBB(strip(r[1]),key):strip(r[1]),150); }
+                return o;
+              })());
+              return true;
+            }
+            return false;
+          }
+          if (!_send(v)) {
+            var _n = 0, _iv = setInterval(function(){
+              if (_send(v) || (++_n > 20)) clearInterval(_iv);
+            }, 500);
+          }
+        })();
+      }catch(e){}
+      form.style.display = "none";
+      const okBox = document.getElementById("email-ok");
+      if(okBox) okBox.style.display = "block";
+    });
+  }
+})();
+</script>
+</body>
+</html>
