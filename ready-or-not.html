@@ -805,7 +805,25 @@ go = function(id){ if(id==="s-cta") buildCTA(); _go(id); };
                 method:"POST",
                 headers:{ "Content-Type":"application/json", "revision":"2024-10-15" },
                 body: JSON.stringify(payload)
-              }).then(function(r){ window.__caSubStatus = r.status; }).catch(function(){ window.__caSubStatus = 0; });
+              }).then(function(r){ window.__caSubStatus = r.status; })
+                .catch(function(){ window.__caSubStatus = 0; })
+                .then(function(){
+                  /* "Subscribed to List" fires only once per profile, so a retake never
+                     re-sends the email. This metric is sent on EVERY submission - point
+                     the Klaviyo flow trigger at it and retakes resend with fresh data. */
+                  try{
+                    fetch("https://a.klaviyo.com/client/events/?company_id=TXaXYk",{
+                      method:"POST",
+                      headers:{ "Content-Type":"application/json", "revision":"2024-10-15" },
+                      body: JSON.stringify({ data:{ type:"event", attributes:{
+                        properties: props,
+                        metric:{ data:{ type:"metric", attributes:{ name:"Combat Assessment Completed" } } },
+                        profile:{ data:{ type:"profile", attributes:{ email:email } } }
+                      } } })
+                    }).then(function(r){ window.__caEventStatus = r.status; })
+                      .catch(function(){ window.__caEventStatus = 0; });
+                  }catch(e){}
+                });
             }catch(e){}
             try{ if(window.klaviyo && typeof window.klaviyo.identify === "function"){ var ip={email:email}; for(var q in props){ ip[q]=props[q]; } window.klaviyo.identify(ip); } }catch(e){}
             return true;
