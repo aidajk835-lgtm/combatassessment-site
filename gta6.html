@@ -759,7 +759,13 @@ go = function(id){ if(id==="s-cta") buildCTA(); _go(id); };
             var props = (function(){
               var P=(typeof PRODUCTS!=="undefined"?PRODUCTS:{}), A_=A||{}, ABS="https://combatassessment.com/";
               var strip=function(s){return String(s==null?"":s).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();};
-              var img=function(p){p=p||"";if(!p)return "";return /^https?:/i.test(p)?p:ABS+String(p).replace(/^\/+/,"");};
+              /* Email clients with the Word/Outlook renderer cannot display WebP, so every
+               email image is served from its JPEG twin. The page itself keeps using WebP. */
+              var img=function(p){
+                p=p||""; if(!p) return "";
+                var u=/^https?:/i.test(p)?p:ABS+String(p).replace(/^\/+/,"");
+                return u.replace(/\.webp(\?|#|$)/i,".jpg$1");
+              };
               var PK={tm_strike_warrior:1,tm_deagle_chrome:1,g19_gen5:1,fiveseven_tan:1};
               var noGBB=function(t,k){var w=PK[k]?"airsoft pistol":"airsoft rifle";return String(t==null?"":t).replace(/GBBR?/gi,w);};
               var cut=function(s,n){s=String(s==null?"":s);if(s.length<=n)return s;var t=s.slice(0,n);var i=t.lastIndexOf(" ");if(i>n*0.55)t=t.slice(0,i);return t.replace(/[\s,;:.\-]+$/,"")+"\u2026";};
